@@ -25,6 +25,7 @@
 #include "internal/core.h"
 #include "provider_local.h"
 #ifndef FIPS_MODULE
+# include "internal/fips_mode.h"
 # include <openssl/self_test.h>
 #endif
 
@@ -1199,6 +1200,18 @@ void *ossl_provider_ctx(const OSSL_PROVIDER *prov)
     return prov->provctx;
 }
 
+#if !defined(FIPS_MODULE) && defined(OPENSSL_FIPS_DETECTION)
+static CRYPTO_ONCE predefined_fips_provider_init = CRYPTO_ONCE_STATIC_INIT;
+
+DEFINE_RUN_ONCE_STATIC(predefined_fips_provider_do_init)
+{
+    if (ossl_fips_mode() == 0)
+        return 1;
+
+    return ossl_predefined_fips_provider_init();
+}
+#endif
+
 /*
  * This function only does something once when store->use_fallbacks == 1,
  * and then sets store->use_fallbacks = 0, so the second call and so on is
@@ -1210,6 +1223,11 @@ static int provider_activate_fallbacks(struct provider_store_st *store)
     int activated_fallback_count = 0;
     int ret = 0;
     const OSSL_PROVIDER_INFO *p;
+
+#if !defined(FIPS_MODULE) && defined(OPENSSL_FIPS_DETECTION)
+    if (!RUN_ONCE(&predefined_fips_provider_init, predefined_fips_provider_do_init))
+        return 0;
+#endif
 
     if (!CRYPTO_THREAD_read_lock(store->lock))
         return 0;
@@ -1261,6 +1279,32 @@ static int provider_activate_fallbacks(struct provider_store_st *store)
         }
         activated_fallback_count++;
     }
+
+#if !defined(FIPS_MODULE) && defined(OPENSSL_FIPS_DETECTION)
+    if (ossl_predefined_fips_provider != NULL) {
+        OSSL_PROVIDER_INFO *p;
+        OSSL_PROVIDER *prov;
+
+	p = ossl_predefined_fips_provider;
+
+	prov = provider_new("fips", NULL, p->parameters);
+	if (prov == NULL)
+            goto err;
+	prov->libctx = store->libctx;
+        prov->error_lib = ERR_get_next_error_library();
+
+	if (provider_activate(prov, 0, 0) < 0) {
+            ossl_provider_free(prov);
+            goto err;
+        }
+        prov->store = store;
+        if (sk_OSSL_PROVIDER_push(store->providers, prov) == 0) {
+            ossl_provider_free(prov);
+            goto err;
+        }
+        activated_fallback_count++;
+    }
+#endif
 
     if (activated_fallback_count > 0) {
         store->use_fallbacks = 0;

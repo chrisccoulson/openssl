@@ -679,6 +679,17 @@ install_ssldirs:
 		cp $(SRCDIR)/apps/openssl.cnf $(DESTDIR)$(OPENSSLDIR)/openssl.cnf; \
 		chmod 644 $(DESTDIR)$(OPENSSLDIR)/openssl.cnf; \
 	fi
+{- output_off() if $disabled{fips-detection}; "" -}
+	@$(ECHO) "install $(SRCDIR)/crypto/fips.cnf -> $(DESTDIR)$(OPENSSLDIR)/fips.cnf.dist"
+	@cp $(SRCDIR)/crypto/fips.cnf $(DESTDIR)$(OPENSSLDIR)/fips.cnf.new
+	@chmod 644 $(DESTDIR)$(OPENSSLDIR)/fips.cnf.new
+	@mv -f  $(DESTDIR)$(OPENSSLDIR)/fips.cnf.new $(DESTDIR)$(OPENSSLDIR)/fips.cnf.dist
+	@if [ ! -f "$(DESTDIR)$(OPENSSLDIR)/fips.cnf" ]; then \
+		$(ECHO) "install $(SRCDIR)/crypto/fips.cnf -> $(DESTDIR)$(OPENSSLDIR)/fips.cnf"; \
+		cp $(SRCDIR)/crypto/fips.cnf $(DESTDIR)$(OPENSSLDIR)/fips.cnf; \
+		chmod 644 $(DESTDIR)$(OPENSSLDIR)/fips.cnf; \
+	fi
+{- output_on() if $disabled{fips}; "" -}
 	@$(ECHO) "install $(SRCDIR)/apps/ct_log_list.cnf -> $(DESTDIR)$(OPENSSLDIR)/ct_log_list.cnf.dist"
 	@cp $(SRCDIR)/apps/ct_log_list.cnf $(DESTDIR)$(OPENSSLDIR)/ct_log_list.cnf.new
 	@chmod 644 $(DESTDIR)$(OPENSSLDIR)/ct_log_list.cnf.new

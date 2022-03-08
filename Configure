@@ -443,6 +443,7 @@ my @disablables = (
     "external-tests",
     "filenames",
     "fips",
+    "fips-detection",
     "fips-securitychecks",
     "fuzz-afl",
     "fuzz-libfuzzer",
@@ -542,6 +543,7 @@ our %disabled = ( # "what"         => "comment"
                   "ec_nistp_64_gcc_128" => "default",
                   "egd"                 => "default",
                   "external-tests"      => "default",
+                  "fips-detection"      => "default",
                   "fuzz-afl"            => "default",
                   "fuzz-libfuzzer"      => "default",
                   "ktls"                => "default",
@@ -639,7 +641,7 @@ my @disable_cascades = (
 
     "cmp"               => [ "crmf" ],
 
-    "fips"              => [ "fips-securitychecks", "acvp-tests" ],
+    "fips"              => [ "fips-securitychecks", "acvp-tests", "fips-detection" ],
 
     "deprecated-3.0"    => [ "engine", "srp" ]
     );
@@ -1831,6 +1833,10 @@ if ($disabled{"dynamic-engine"}) {
     push @{$config{openssl_feature_defines}}, "OPENSSL_NO_DYNAMIC_ENGINE";
 } else {
     push @{$config{openssl_feature_defines}}, "OPENSSL_NO_STATIC_ENGINE";
+}
+
+unless($disabled{"fips-detection"}) {
+    push @{$config{openssl_feature_defines}}, "OPENSSL_FIPS_DETECTION";
 }
 
 # If we use the unified build, collect information from build.info files

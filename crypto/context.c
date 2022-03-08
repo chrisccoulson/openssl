@@ -15,6 +15,11 @@
 #include "internal/bio.h"
 #include "internal/provider.h"
 
+#ifndef FIPS_MODULE
+# include "crypto/evp.h"
+# include "internal/fips_mode.h"
+#endif
+
 struct ossl_lib_ctx_onfree_list_st {
     ossl_lib_ctx_onfree_fn *fn;
     struct ossl_lib_ctx_onfree_list_st *next;
@@ -99,6 +104,13 @@ static int context_init(OSSL_LIB_CTX *ctx)
     /* Everything depends on properties, so we also pre-initialise that */
     if (!ossl_property_parse_init(ctx))
         goto err;
+
+#if !defined(FIPS_MODULE) && defined(OPENSSL_FIPS_DETECTION)
+    if (ossl_fips_mode() == 1) {
+        if (!evp_default_properties_enable_fips_int(ctx, 1, 0))
+            goto err;
+    }
+#endif
 
     return 1;
  err:

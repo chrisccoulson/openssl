@@ -1,0 +1,3 @@
+fips_provider = fips_sect
+
+.include fipsmodule.cnf

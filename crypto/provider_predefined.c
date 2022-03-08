@@ -30,3 +30,7 @@ const OSSL_PROVIDER_INFO ossl_predefined_providers[] = {
 #endif
     { NULL, NULL, NULL, NULL, 0 }
 };
+
+#if !defined(FIPS_MODULE) && defined(OPENSSL_FIPS_DETECTION)
+OSSL_PROVIDER_INFO *ossl_predefined_fips_provider = NULL;
+#endif

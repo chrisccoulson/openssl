@@ -104,6 +104,10 @@ SOURCE[../libcrypto]=$UTIL_COMMON \
         punycode.c passphrase.c
 SOURCE[../providers/libfips.a]=$UTIL_COMMON
 
+IF[{- !$disabled{fips-detection} -}]
+  SOURCE[../libcrypto]=fips_mode.c
+ENDIF
+
 SOURCE[../libcrypto]=$UPLINKSRC
 DEFINE[../libcrypto]=$UPLINKDEF
 

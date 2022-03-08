@@ -62,6 +62,7 @@ typedef struct mem_st MEM;
 DEFINE_LHASH_OF(MEM);
 
 # define OPENSSL_CONF             "openssl.cnf"
+# define OPENSSL_FIPS_CONF        "fips.cnf"
 
 # ifndef OPENSSL_SYS_VMS
 #  define X509_CERT_AREA          OPENSSLDIR
