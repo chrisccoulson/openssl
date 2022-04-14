@@ -16,6 +16,11 @@
 #include "internal/provider.h"
 #include "crypto/ctype.h"
 
+#ifndef FIPS_MODULE
+# include "crypto/evp.h"
+# include "fips_mode.h"
+#endif
+
 struct ossl_lib_ctx_onfree_list_st {
     ossl_lib_ctx_onfree_fn *fn;
     struct ossl_lib_ctx_onfree_list_st *next;
@@ -68,10 +73,25 @@ int ossl_lib_ctx_is_child(OSSL_LIB_CTX *ctx)
     return ctx->ischild;
 }
 
+#if !defined(FIPS_MODULE)
+static CRYPTO_ONCE init_fips = CRYPTO_ONCE_STATIC_INIT;
+
+DEFINE_RUN_ONCE_STATIC(do_init_fips)
+{
+    ossl_init_fips();
+    return 1;
+}
+#endif
+
 static int context_init(OSSL_LIB_CTX *ctx)
 {
     size_t i;
     int exdata_done = 0;
+
+#if !defined(FIPS_MODULE)
+    if (!RUN_ONCE(&init_fips, do_init_fips))
+        return 0;
+#endif
 
     ctx->lock = CRYPTO_THREAD_lock_new();
     if (ctx->lock == NULL)
