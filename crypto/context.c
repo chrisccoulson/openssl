@@ -121,6 +121,11 @@ static int context_init(OSSL_LIB_CTX *ctx)
     if (!ossl_property_parse_init(ctx))
         goto err;
 
+#if !defined(FIPS_MODULE)
+    if (ossl_fips_mode() == 1 && !evp_default_properties_enable_fips_int(ctx, 1, 0))
+        goto err;
+#endif
+
     return 1;
  err:
     if (exdata_done)

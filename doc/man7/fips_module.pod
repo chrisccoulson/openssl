@@ -42,6 +42,21 @@ All of the above APIs are deprecated in OpenSSL 3.0 - so a simple rule is to
 avoid using all deprecated functions. See L<migration_guide(7)> for a list of
 deprecated functions.
 
+=head2 Applications running on systems operating in FIPS-approved mode
+
+When running on systems that are operating in FIPS-approved mode and no
+providers are loaded explicitly via the application or config, the FIPS module
+is loaded implicitly as a fallback provider whenever an algorithm is fetched
+for the first time. The "default" provider is not loaded implicitly in this
+case, and must be loaded explicitly if it is required by an application.
+
+Every L<OSSL_LIB_CTX(3)> is created with "fips=yes" as a default property in
+this mode so that algorithm fetches will only fetch algorithms that define
+this property and are FIPS-approved. To use algorithms that are not FIPS
+approved, either specify "-fips" or "fips=no" as a property query string with
+fetching functions, or use the L<EVP_default_properties_enable_fips(3)> function
+to remove the default property for a specific B<OSSL_LIB_CTX>.
+
 =head2 Making all applications use the FIPS module by default
 
 One simple approach is to cause all applications that are using OpenSSL to only
