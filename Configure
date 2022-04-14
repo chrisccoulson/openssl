@@ -698,6 +698,7 @@ my %user = (
     LDLIBS      => [ env('LDLIBS') || () ],  # -l
     MT          => undef,
     MTFLAGS     => [],
+    OBJCOPY     => env('OBJCOPY'),
     PERL        => env('PERL') || ($^O ne "VMS" ? $^X : "perl"),
     RANLIB      => env('RANLIB'),
     RC          => env('RC') || env('WINDRES'),

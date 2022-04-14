@@ -129,7 +129,7 @@ GENERATED_PODS={- # common0.tmpl provides @generated
                        fill_lines(" ", $COLUMNS - 15,
                                   map { my $x = $_;
                                         (
-                                          grep { 
+                                          grep {
                                                  $unified_info{attributes}->{depends}
                                                  ->{$x}->{$_}->{pod} // 0
                                                }
@@ -351,6 +351,7 @@ PERL={- $config{PERL} -}
 
 AR=$(CROSS_COMPILE){- $config{AR} -}
 ARFLAGS= {- join(' ', @{$config{ARFLAGS}}) -}
+OBJCOPY={- $config{OBJCOPY} -}
 RANLIB={- $config{RANLIB} ? "\$(CROSS_COMPILE)$config{RANLIB}" : "true"; -}
 RC= $(CROSS_COMPILE){- $config{RC} -}
 RCFLAGS={- join(' ', @{$config{RCFLAGS}}) -} {- $target{shared_rcflag} -}
@@ -534,6 +535,7 @@ run_tests:
 	  PERL="$(PERL)" \
 	  FIPSKEY="$(FIPSKEY)" \
 	  EXE_EXT={- platform->binext() -} \
+	  OBJCOPY=$(OBJCOPY) \
 	  $(PERL) $(SRCDIR)/test/run_tests.pl $(TESTS) )
 	@ : {- if ($disabled{tests}) { output_on(); } else { output_off(); } "" -}
 	@echo "Tests are not supported with your chosen Configure options"
@@ -1867,13 +1869,24 @@ EOF
                       fill_lines(' ', $COLUMNS - length($dso) - 2,
                                  @objs, @defs, @deps));
 
-      return <<"EOF";
+      if ($args{attrs}{fips}) {
+          return <<"EOF";
+$dso: $deps
+	\$(CC) \$(DSO_CFLAGS) $linkflags\$(DSO_LDFLAGS) \\
+		-o $dso$shared_def \\
+		$objs \\
+		$linklibs\$(DSO_EX_LIBS)
+	\$(PERL) \$(SRCDIR)/util/fipsmodule-checksum.pl --key \$(FIPSKEY) --objcopy \$(OBJCOPY) --module $dso
+EOF
+      } else {
+          return <<"EOF";
 $dso: $deps
 	\$(CC) \$(DSO_CFLAGS) $linkflags\$(DSO_LDFLAGS) \\
 		-o $dso$shared_def \\
 		$objs \\
 		$linklibs\$(DSO_EX_LIBS)
 EOF
+      }
   }
   sub obj2lib {
       my %args = @_;

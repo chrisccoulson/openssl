@@ -62,7 +62,7 @@ IF[{- !$disabled{tests} -}]
           context_internal_test aesgcmtest params_test evp_pkey_dparams_test \
           keymgmt_internal_test hexstr_test provider_status_test defltfips_test \
           bio_readbuffer_test user_property_test pkcs7_test upcallstest \
-          provfetchtest prov_config_test rand_test
+          provfetchtest prov_config_test rand_test bad_fips_checksum_test
 
   IF[{- !$disabled{'deprecated-3.0'} -}]
     PROGRAMS{noinst}=enginetest
@@ -578,6 +578,10 @@ IF[{- !$disabled{tests} -}]
   SOURCE[cmp_client_test]=cmp_client_test.c helpers/cmp_testlib.c ../apps/lib/cmp_mock_srv.c
   INCLUDE[cmp_client_test]=.. ../include ../apps/include
   DEPEND[cmp_client_test]=../libcrypto.a libtestutil.a
+
+  SOURCE[bad_fips_checksum_test]=bad_fips_checksum_test.c
+  INCLUDE[bad_fips_checksum_test]=../include ../apps/include
+  DEPEND[bad_fips_checksum_test]=../libcrypto libtestutil.a
 
   # Internal test programs.  These are essentially a collection of internal
   # test routines.  Some of them need to reach internal symbols that aren't

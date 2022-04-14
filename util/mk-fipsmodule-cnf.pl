@@ -40,5 +40,5 @@ print <<_____;
 activate = $activate
 conditional-errors = $conditional_errors
 security-checks = $security_checks
-module-mac = $module_mac
+#module-mac =
 _____
