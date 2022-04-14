@@ -440,7 +440,10 @@ int pkcs12_main(int argc, char **argv)
         if (cert_pbe == NID_undef) {
             /* Adapt default algorithm */
 # ifndef OPENSSL_NO_RC2
-            cert_pbe = NID_pbe_WithSHA1And40BitRC2_CBC;
+            cert_pbe =
+                EVP_default_properties_is_fips_enabled(app_get0_libctx()) ?
+                    NID_pbe_WithSHA1And3_Key_TripleDES_CBC :
+                    NID_pbe_WithSHA1And40BitRC2_CBC;
 # else
             cert_pbe = NID_pbe_WithSHA1And3_Key_TripleDES_CBC;
 # endif

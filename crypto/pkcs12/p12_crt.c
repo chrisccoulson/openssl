@@ -219,7 +219,7 @@ PKCS12_SAFEBAG *PKCS12_add_key(STACK_OF(PKCS12_SAFEBAG) **pbags,
                              NULL, NULL);
 }
 
-PKCS12_SAFEBAG *PKCS12_add_secret(STACK_OF(PKCS12_SAFEBAG) **pbags, 
+PKCS12_SAFEBAG *PKCS12_add_secret(STACK_OF(PKCS12_SAFEBAG) **pbags,
                                   int nid_type, const unsigned char *value, int len)
 {
     PKCS12_SAFEBAG *bag = NULL;
@@ -255,7 +255,10 @@ int PKCS12_add_safe_ex(STACK_OF(PKCS7) **psafes, STACK_OF(PKCS12_SAFEBAG) *bags,
 #ifdef OPENSSL_NO_RC2
         nid_safe = NID_pbe_WithSHA1And3_Key_TripleDES_CBC;
 #else
-        nid_safe = NID_pbe_WithSHA1And40BitRC2_CBC;
+        nid_safe =
+            EVP_default_properties_is_fips_enabled(ctx) ?
+                NID_pbe_WithSHA1And3_Key_TripleDES_CBC :
+                NID_pbe_WithSHA1And40BitRC2_CBC;
 #endif
 
     if (nid_safe == -1)
