@@ -37,6 +37,7 @@ $ENV{OPENSSL_CONF} = rel2abs(catfile($srctop, "apps", "openssl.cnf"));
 $ENV{OPENSSL_CONF_INCLUDE} = rel2abs(catdir($bldtop, "test"));
 $ENV{OPENSSL_MODULES} = rel2abs(catdir($bldtop, "providers"));
 $ENV{OPENSSL_ENGINES} = rel2abs(catdir($bldtop, "engines"));
+$ENV{OPENSSL_FIPS_MODE_SWITCH_PATH} = "/nonexistant";
 $ENV{CTLOG_FILE} = rel2abs(catfile($srctop, "test", "ct", "log_list.cnf"));
 
 my %tapargs =

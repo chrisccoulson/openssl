@@ -48,8 +48,22 @@ A provider in OpenSSL is a component that collects together algorithm
 implementations. In order to use an algorithm you must have at least one
 provider loaded that contains an implementation of it. OpenSSL comes with a
 number of providers and they may also be obtained from third parties. If you
-don't load a provider explicitly (either in program code or via config) then the
-OpenSSL built-in "default" provider will be automatically loaded.
+don't load a provider explicitly (either in program code or via config) then one
+of the following OpenSSL providers will be loaded automatically:
+
+=over 4
+
+=item *
+
+The built-in "default" provider when running on a system that is not operating
+in FIPS-approved mode.
+
+=item *
+
+The "fips" provider when running on a system that is operating in FIPS-approved
+mode.
+
+=back
 
 =head2 Library contexts
 
@@ -300,9 +314,10 @@ algorithms), the property query string "provider=default" can be used as a
 search criterion for these implementations.  The default provider includes all
 of the functionality in the base provider below.
 
-If you don't load any providers at all then the "default" provider will be
-automatically loaded. If you explicitly load any provider then the "default"
-provider would also need to be explicitly loaded if it is required.
+If you don't load any providers at all and the system is not running in
+FIPS-approved mode, then the "default" provider will be automatically loaded.
+If you explicitly load any provider then the "default" provider would also need
+to be explicitly loaded if it is required.
 
 See L<OSSL_PROVIDER-default(7)>.
 
@@ -332,6 +347,11 @@ these implementations. All approved algorithm implementations in the FIPS
 provider can also be selected with the property "fips=yes". The FIPS provider
 may also contain non-approved algorithm implementations and these can be
 selected with the property "fips=no".
+
+If you don't load any providers at all and the system is running in
+FIPS-approved mode, then the FIPS provider will be automatically loaded.
+If you explicitly load any provider then the FIPS provider would also need
+to be explicitly loaded if it is required.
 
 See L<OSSL_PROVIDER-FIPS(7)> and L<fips_module(7)>.
 

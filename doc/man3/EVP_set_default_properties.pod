@@ -34,7 +34,8 @@ query for the given I<libctx>. It merges the fips default property query with an
 existing query strings that have been set via EVP_set_default_properties().
 
 EVP_default_properties_is_fips_enabled() indicates if 'fips=yes' is a default
-property for the given I<libctx>.
+property for the given I<libctx>. This is the default for every I<libctx> on
+systems that are operaring in FIPS-approved mode.
 
 =head1 NOTES
 

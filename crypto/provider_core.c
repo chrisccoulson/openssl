@@ -544,7 +544,7 @@ OSSL_PROVIDER *ossl_provider_new(OSSL_LIB_CTX *libctx, const char *name,
         size_t i;
 
         /* Check if this is a predefined builtin provider */
-        for (p = ossl_predefined_providers; p->name != NULL; p++) {
+        for (p = ossl_predefined_providers(); p->name != NULL; p++) {
             if (strcmp(p->name, name) == 0) {
                 template = *p;
                 break;
@@ -1291,7 +1291,7 @@ static int provider_activate_fallbacks(struct provider_store_st *store)
         return 1;
     }
 
-    for (p = ossl_predefined_providers; p->name != NULL; p++) {
+    for (p = ossl_predefined_providers(); p->name != NULL; p++) {
         OSSL_PROVIDER *prov = NULL;
 
         if (!p->is_fallback)

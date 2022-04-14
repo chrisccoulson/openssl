@@ -23,7 +23,7 @@ typedef struct {
     unsigned int is_fallback:1;
 } OSSL_PROVIDER_INFO;
 
-extern const OSSL_PROVIDER_INFO ossl_predefined_providers[];
+const OSSL_PROVIDER_INFO *ossl_predefined_providers(void);
 
 void ossl_provider_info_clear(OSSL_PROVIDER_INFO *info);
 int ossl_provider_info_add_to_store(OSSL_LIB_CTX *libctx,
