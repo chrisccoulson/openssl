@@ -7,6 +7,7 @@
  * https://www.openssl.org/source/license.html
  */
 
+#define _GNU_SOURCE
 #include <string.h>
 #include <openssl/evp.h>
 #include <openssl/params.h>
@@ -17,6 +18,8 @@
 #include <openssl/proverr.h>
 #include "e_os.h"
 #include "prov/providercommon.h"
+#include <dlfcn.h>
+#include <link.h>
 
 /*
  * We're cheating here. Normally we don't allow RUN_ONCE usage inside the FIPS
@@ -49,6 +52,8 @@ static int FIPS_conditional_error_check = 1;
 static CRYPTO_RWLOCK *self_test_lock = NULL;
 static CRYPTO_RWLOCK *fips_state_lock = NULL;
 static unsigned char fixed_key[32] = { FIPS_KEY_ELEMENTS };
+
+static const unsigned char __attribute__((section(".module-checksum"))) module_checksum[32] = {0};
 
 static CRYPTO_ONCE fips_self_test_init = CRYPTO_ONCE_STATIC_INIT;
 DEFINE_RUN_ONCE_STATIC(do_fips_self_test_init)
@@ -179,6 +184,7 @@ DEP_FINI_ATTRIBUTE void cleanup(void)
  */
 static int verify_integrity(OSSL_CORE_BIO *bio, OSSL_FUNC_BIO_read_ex_fn read_ex_cb,
                             unsigned char *expected, size_t expected_len,
+                            unsigned int omit_start, unsigned int omit_len,
                             OSSL_LIB_CTX *libctx, OSSL_SELF_TEST *ev,
                             const char *event_type)
 {
@@ -189,8 +195,14 @@ static int verify_integrity(OSSL_CORE_BIO *bio, OSSL_FUNC_BIO_read_ex_fn read_ex
     EVP_MAC *mac = NULL;
     EVP_MAC_CTX *ctx = NULL;
     OSSL_PARAM params[2], *p = params;
+    unsigned long omit_end, omit_remain;
+    unsigned long off = 0;
+    unsigned long x, n;
 
     OSSL_SELF_TEST_onbegin(ev, event_type, OSSL_SELF_TEST_DESC_INTEGRITY_HMAC);
+
+    omit_end = omit_start + omit_len - 1;
+    omit_remain = omit_len;
 
     mac = EVP_MAC_fetch(libctx, MAC_NAME, NULL);
     if (mac == NULL)
@@ -209,6 +221,13 @@ static int verify_integrity(OSSL_CORE_BIO *bio, OSSL_FUNC_BIO_read_ex_fn read_ex
         status = read_ex_cb(bio, buf, sizeof(buf), &bytes_read);
         if (status != 1)
             break;
+        if (off <= omit_end && off + bytes_read > omit_start) {
+            x = omit_start > off ? omit_start - off : 0;
+            n = bytes_read - x > omit_remain ? omit_remain : bytes_read - x;
+            memset(buf + x, 0, n);
+            omit_remain -= n;
+        }
+        off += bytes_read;
         if (!EVP_MAC_update(ctx, buf, bytes_read))
             goto err;
     }
@@ -242,10 +261,11 @@ int SELF_TEST_post(SELF_TEST_POST_PARAMS *st, int on_demand_test)
     int kats_already_passed = 0;
     long checksum_len;
     OSSL_CORE_BIO *bio_module = NULL, *bio_indicator = NULL;
-    unsigned char *module_checksum = NULL;
     unsigned char *indicator_checksum = NULL;
     int loclstate;
     OSSL_SELF_TEST *ev = NULL;
+    Dl_info dl_info;
+    struct link_map *lm;
 
     if (!RUN_ONCE(&fips_self_test_init, do_fips_self_test_init))
         return 0;
@@ -285,8 +305,7 @@ int SELF_TEST_post(SELF_TEST_POST_PARAMS *st, int on_demand_test)
         CRYPTO_THREAD_unlock(fips_state_lock);
     }
 
-    if (st == NULL
-            || st->module_checksum_data == NULL) {
+    if (st == NULL) {
         ERR_raise(ERR_LIB_PROV, PROV_R_MISSING_CONFIG_DATA);
         goto end;
     }
@@ -295,19 +314,20 @@ int SELF_TEST_post(SELF_TEST_POST_PARAMS *st, int on_demand_test)
     if (ev == NULL)
         goto end;
 
-    module_checksum = OPENSSL_hexstr2buf(st->module_checksum_data,
-                                         &checksum_len);
-    if (module_checksum == NULL) {
-        ERR_raise(ERR_LIB_PROV, PROV_R_INVALID_CONFIG_DATA);
-        goto end;
-    }
     bio_module = (*st->bio_new_file_cb)(st->module_filename, "rb");
+
+    if (!dladdr1(module_checksum, &dl_info, (void **)&lm, RTLD_DL_LINKMAP))
+        goto end;
 
     /* Always check the integrity of the fips module */
     if (bio_module == NULL
             || !verify_integrity(bio_module, st->bio_read_ex_cb,
-                                 module_checksum, checksum_len, st->libctx,
-                                 ev, OSSL_SELF_TEST_TYPE_MODULE_INTEGRITY)) {
+                                 (unsigned char *)module_checksum,
+                                 sizeof(module_checksum),
+                                 (unsigned long)module_checksum - lm->l_addr,
+                                 sizeof(module_checksum),
+                                 st->libctx, ev,
+                                 OSSL_SELF_TEST_TYPE_MODULE_INTEGRITY)) {
         ERR_raise(ERR_LIB_PROV, PROV_R_MODULE_INTEGRITY_FAILURE);
         goto end;
     }
@@ -334,7 +354,7 @@ int SELF_TEST_post(SELF_TEST_POST_PARAMS *st, int on_demand_test)
                                      strlen(st->indicator_data));
         if (bio_indicator == NULL
                 || !verify_integrity(bio_indicator, st->bio_read_ex_cb,
-                                     indicator_checksum, checksum_len,
+                                     indicator_checksum, checksum_len, 0, 0,
                                      st->libctx, ev,
                                      OSSL_SELF_TEST_TYPE_INSTALL_INTEGRITY)) {
             ERR_raise(ERR_LIB_PROV, PROV_R_INDICATOR_INTEGRITY_FAILURE);
@@ -358,7 +378,6 @@ int SELF_TEST_post(SELF_TEST_POST_PARAMS *st, int on_demand_test)
     ok = 1;
 end:
     OSSL_SELF_TEST_free(ev);
-    OPENSSL_free(module_checksum);
     OPENSSL_free(indicator_checksum);
 
     if (st != NULL) {
