@@ -22,6 +22,7 @@
 #include "prov/providercommon.h"
 #include "prov/provider_util.h"
 #include "prov/seeding.h"
+#include "fipsprov.h"
 #include "self_test.h"
 #include "internal/core.h"
 
@@ -174,17 +175,17 @@ static int fips_get_params(void *provctx, OSSL_PARAM params[])
                                               &fips_prov_ossl_ctx_method);
 
     p = OSSL_PARAM_locate(params, OSSL_PROV_PARAM_NAME);
-    if (p != NULL && !OSSL_PARAM_set_utf8_ptr(p, "OpenSSL FIPS Provider"))
+    if (p != NULL && !OSSL_PARAM_set_utf8_ptr(p, FIPS_NAME))
         return 0;
     p = OSSL_PARAM_locate(params, OSSL_PROV_PARAM_VERSION);
-    if (p != NULL && !OSSL_PARAM_set_utf8_ptr(p, OPENSSL_VERSION_STR))
+    if (p != NULL && !OSSL_PARAM_set_utf8_ptr(p, FIPS_VERSION_STR))
         return 0;
     p = OSSL_PARAM_locate(params, OSSL_PROV_PARAM_BUILDINFO);
     if (p != NULL) {
         char str[256];
         BIGNUM *cs = BN_bin2bn(module_checksum, sizeof(module_checksum), NULL);
         char *cs_str = BN_bn2hex(cs);
-        BIO_snprintf(str, sizeof(str), "%s-%s", OPENSSL_FULL_VERSION_STR, cs_str);
+        BIO_snprintf(str, sizeof(str), "%s-%s", FIPS_FULL_VERSION_STR, cs_str);
         OPENSSL_free(cs_str);
         BN_free(cs);
         if (!OSSL_PARAM_set_utf8_ptr(p, str))

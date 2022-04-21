@@ -1,0 +1,24 @@
+/*
+ * {- join("\n * ", @autowarntext) -}
+ *
+ * Copyright 1999-2020 The OpenSSL Project Authors. All Rights Reserved.
+ *
+ * Licensed under the Apache License 2.0 (the "License").  You may not use
+ * this file except in compliance with the License.  You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * https://www.openssl.org/source/license.html
+ */
+
+#include <openssl/opensslv.h>
+{- output_off() if $config{override_fips_name}; -}
+#define FIPS_NAME "OpenSSL FIPS Provider"
+{- $config{override_fips_name} ? output_on() : output_off() -}
+#define FIPS_NAME "{- $config{override_fips_name} -}"
+{- output_on() if !$config{override_fips_name} -}
+{- output_off() if $config{override_fips_version}; -}
+#define FIPS_VERSION_STR OPENSSL_VERSION_STR
+#define FIPS_FULL_VERSION_STR OPENSSL_FULL_VERSION_STR
+{- $config{override_fips_version} ? output_on() : output_off() -}
+#define FIPS_VERSION_STR "{- $config{override_fips_version} -}"
+#define FIPS_FULL_VERSION_STR FIPS_VERSION_STR
+{- output_on() if !$config{override_fips_version} -}

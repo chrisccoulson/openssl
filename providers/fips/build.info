@@ -4,3 +4,6 @@ SOURCE[../libfips.a]=fipsprov.c self_test.c self_test_kats.c
 
 # It is necessary to have an explicit entry point
 SOURCE[../fips]=fips_entry.c
+
+DEPEND[fipsprov.o]=fipsprov.h
+GENERATE[fipsprov.h]=fipsprov.h.in
