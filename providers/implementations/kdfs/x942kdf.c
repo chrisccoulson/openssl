@@ -376,8 +376,9 @@ static int x942kdf_set_buffer(unsigned char **out, size_t *out_len,
     if (p->data_size == 0 || p->data == NULL)
         return 1;
 
-    OPENSSL_free(*out);
+    OPENSSL_clear_free(*out, *out_len);
     *out = NULL;
+    *out_len = 0;
     return OSSL_PARAM_get_octet_string(p, (void **)out, 0, out_len);
 }
 

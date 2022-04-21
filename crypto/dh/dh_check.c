@@ -317,7 +317,8 @@ int ossl_dh_check_pairwise(const DH *dh)
     ctx = BN_CTX_new_ex(dh->libctx);
     if (ctx == NULL)
         goto err;
-    pub_key = BN_new();
+    BN_CTX_start(ctx);
+    pub_key = BN_CTX_get(ctx);
     if (pub_key == NULL)
         goto err;
 
@@ -327,7 +328,7 @@ int ossl_dh_check_pairwise(const DH *dh)
     /* check it matches the existing pubic_key */
     ret = BN_cmp(pub_key, dh->pub_key) == 0;
 err:
-    BN_free(pub_key);
+    BN_CTX_end(ctx);
     BN_CTX_free(ctx);
     return ret;
 }

@@ -61,7 +61,7 @@ int ossl_dsa_key_fromdata(DSA *dsa, const OSSL_PARAM params[],
 
  err:
     BN_clear_free(priv_key);
-    BN_free(pub_key);
+    BN_clear_free(pub_key);
     return 0;
 }
 
