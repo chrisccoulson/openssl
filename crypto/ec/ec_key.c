@@ -95,7 +95,7 @@ void EC_KEY_free(EC_KEY *r)
 #endif
     CRYPTO_THREAD_lock_free(r->lock);
     EC_GROUP_free(r->group);
-    EC_POINT_free(r->pub_key);
+    EC_POINT_clear_free(r->pub_key);
     BN_clear_free(r->priv_key);
     OPENSSL_free(r->propq);
 
@@ -554,7 +554,7 @@ int ossl_ec_key_pairwise_check(const EC_KEY *eckey, BN_CTX *ctx)
     }
     ret = 1;
 err:
-    EC_POINT_free(point);
+    EC_POINT_clear_free(point);
     return ret;
 }
 
@@ -787,7 +787,7 @@ int EC_KEY_set_public_key(EC_KEY *key, const EC_POINT *pub_key)
     if (key->meth->set_public != NULL
         && key->meth->set_public(key, pub_key) == 0)
         return 0;
-    EC_POINT_free(key->pub_key);
+    EC_POINT_clear_free(key->pub_key);
     key->pub_key = EC_POINT_dup(pub_key, key->group);
     key->dirty_cnt++;
     return (key->pub_key == NULL) ? 0 : 1;

@@ -116,7 +116,7 @@ static void kdf_hkdf_reset(void *vctx)
     void *provctx = ctx->provctx;
 
     ossl_prov_digest_reset(&ctx->digest);
-    OPENSSL_free(ctx->salt);
+    OPENSSL_clear_free(ctx->salt, ctx->salt_len);
     OPENSSL_free(ctx->prefix);
     OPENSSL_free(ctx->label);
     OPENSSL_clear_free(ctx->data, ctx->data_len);
@@ -233,8 +233,9 @@ static int hkdf_common_set_ctx_params(KDF_HKDF *ctx, const OSSL_PARAM params[])
 
     if ((p = OSSL_PARAM_locate_const(params, OSSL_KDF_PARAM_SALT)) != NULL) {
         if (p->data_size != 0 && p->data != NULL) {
-            OPENSSL_free(ctx->salt);
+            OPENSSL_clear_free(ctx->salt, ctx->salt_len);
             ctx->salt = NULL;
+            ctx->salt_len = 0;
             if (!OSSL_PARAM_get_octet_string(p, (void **)&ctx->salt, 0,
                                              &ctx->salt_len))
                 return 0;

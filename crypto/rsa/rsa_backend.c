@@ -110,8 +110,8 @@ int ossl_rsa_fromdata(RSA *rsa, const OSSL_PARAM params[], int include_private)
     return 1;
 
  err:
-    BN_free(n);
-    BN_free(e);
+    BN_clear_free(n);
+    BN_clear_free(e);
     BN_free(d);
     sk_BIGNUM_pop_free(factors, BN_free);
     sk_BIGNUM_pop_free(exps, BN_free);

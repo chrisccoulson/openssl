@@ -91,7 +91,7 @@ int ossl_dh_key_fromdata(DH *dh, const OSSL_PARAM params[], int include_private)
 
  err:
     BN_clear_free(priv_key);
-    BN_free(pub_key);
+    BN_clear_free(pub_key);
     return 0;
 }
 

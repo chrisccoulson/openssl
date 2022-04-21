@@ -312,7 +312,7 @@ void DSA_get0_key(const DSA *d,
 int DSA_set0_key(DSA *d, BIGNUM *pub_key, BIGNUM *priv_key)
 {
     if (pub_key != NULL) {
-        BN_free(d->pub_key);
+        BN_clear_free(d->pub_key);
         d->pub_key = pub_key;
     }
     if (priv_key != NULL) {
