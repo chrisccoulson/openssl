@@ -1039,6 +1039,14 @@ while (@argvcopy)
                         {
                         push @{$useradd{CPPFLAGS}}, $1;
                         }
+                elsif (/^--fips-provider-version=(.*)$/)
+                        {
+                        $config{override_fips_version}=$1;
+                        }
+                elsif (/^--fips-provider-name=(.*)$/)
+                        {
+                        $config{override_fips_name}=$1;
+                        }
                 else    # common if (/^[-+]/), just pass down...
                         {
                         # Treat %xx as an ASCII code (e.g. replace %20 by a space character).
