@@ -8,6 +8,7 @@
  */
 
 #include <assert.h>
+#include <openssl/bn.h>
 #include <openssl/core_dispatch.h>
 #include <openssl/core_names.h>
 #include <openssl/params.h>
@@ -26,6 +27,8 @@
 
 static const char FIPS_DEFAULT_PROPERTIES[] = "provider=fips,fips=yes";
 static const char FIPS_UNAPPROVED_PROPERTIES[] = "provider=fips,fips=no";
+
+extern const unsigned char module_checksum[32];
 
 /*
  * Forward declarations to ensure that interface functions are correctly
@@ -177,8 +180,16 @@ static int fips_get_params(void *provctx, OSSL_PARAM params[])
     if (p != NULL && !OSSL_PARAM_set_utf8_ptr(p, OPENSSL_VERSION_STR))
         return 0;
     p = OSSL_PARAM_locate(params, OSSL_PROV_PARAM_BUILDINFO);
-    if (p != NULL && !OSSL_PARAM_set_utf8_ptr(p, OPENSSL_FULL_VERSION_STR))
-        return 0;
+    if (p != NULL) {
+        char str[256];
+        BIGNUM *cs = BN_bin2bn(module_checksum, sizeof(module_checksum), NULL);
+        char *cs_str = BN_bn2hex(cs);
+        BIO_snprintf(str, sizeof(str), "%s-%s", OPENSSL_FULL_VERSION_STR, cs_str);
+        OPENSSL_free(cs_str);
+        BN_free(cs);
+        if (!OSSL_PARAM_set_utf8_ptr(p, str))
+            return 0;
+    }
     p = OSSL_PARAM_locate(params, OSSL_PROV_PARAM_STATUS);
     if (p != NULL && !OSSL_PARAM_set_int(p, ossl_prov_is_running()))
         return 0;
