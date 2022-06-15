@@ -448,6 +448,13 @@ static int rsa_set_ctx_params(void *vprsactx, const OSSL_PARAM params[])
         EVP_MD_free(prsactx->oaep_md);
         prsactx->oaep_md = EVP_MD_fetch(prsactx->libctx, mdname, mdprops);
 
+        if (!ossl_digest_is_allowed(prsactx->libctx, prsactx->oaep_md)) {
+            ERR_raise(ERR_LIB_PROV, PROV_R_DIGEST_NOT_ALLOWED);
+            EVP_MD_free(prsactx->oaep_md);
+            prsactx->oaep_md = NULL;
+            return 0;
+        }
+
         if (prsactx->oaep_md == NULL)
             return 0;
     }
@@ -511,6 +518,13 @@ static int rsa_set_ctx_params(void *vprsactx, const OSSL_PARAM params[])
 
         EVP_MD_free(prsactx->mgf1_md);
         prsactx->mgf1_md = EVP_MD_fetch(prsactx->libctx, mdname, str);
+
+        if (!ossl_digest_is_allowed(prsactx->libctx, prsactx->mgf1_md)) {
+            ERR_raise(ERR_LIB_PROV, PROV_R_DIGEST_NOT_ALLOWED);
+            EVP_MD_free(prsactx->mgf1_md);
+            prsactx->mgf1_md = NULL;
+            return 0;
+        }
 
         if (prsactx->mgf1_md == NULL)
             return 0;
