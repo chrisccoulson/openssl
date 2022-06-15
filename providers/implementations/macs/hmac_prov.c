@@ -20,11 +20,14 @@
 #include <openssl/params.h>
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
+#include <openssl/err.h>
+#include <openssl/proverr.h>
 
 #include "prov/implementations.h"
 #include "prov/provider_ctx.h"
 #include "prov/provider_util.h"
 #include "prov/providercommon.h"
+#include "prov/securitycheck.h"
 
 /*
  * Forward declaration of everything implemented here.  This is not strictly
@@ -309,12 +312,23 @@ static int hmac_set_ctx_params(void *vmacctx, const OSSL_PARAM params[])
     OSSL_LIB_CTX *ctx = PROV_LIBCTX_OF(macctx->provctx);
     const OSSL_PARAM *p;
     int flags = 0;
+    const EVP_MD *md;
 
     if (params == NULL)
         return 1;
 
     if (!ossl_prov_digest_load_from_params(&macctx->digest, params, ctx))
         return 0;
+    /*
+     * HMAC_Init_ex already has a check to reject extendable output digests, but
+     * be explicit about it here when the digest is set, like other algorithms.
+     */
+    md = ossl_prov_digest_md(&macctx->digest);
+    if (md != NULL && !ossl_digest_is_allowed(ctx, md)) {
+        ERR_raise(ERR_LIB_PROV, PROV_R_DIGEST_NOT_ALLOWED);
+        ossl_prov_digest_reset(&macctx->digest);
+        return 0;
+    }
 
     if (!set_flag(params, OSSL_MAC_PARAM_DIGEST_NOINIT, EVP_MD_CTX_FLAG_NO_INIT,
                   &flags))

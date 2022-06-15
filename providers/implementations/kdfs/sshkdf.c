@@ -21,6 +21,7 @@
 #include "prov/providercommon.h"
 #include "prov/implementations.h"
 #include "prov/provider_util.h"
+#include "prov/securitycheck.h"
 
 /* See RFC 4253, Section 7.2 */
 static OSSL_FUNC_kdf_newctx_fn kdf_sshkdf_new;
@@ -137,12 +138,20 @@ static int kdf_sshkdf_set_ctx_params(void *vctx, const OSSL_PARAM params[])
     const OSSL_PARAM *p;
     KDF_SSHKDF *ctx = vctx;
     OSSL_LIB_CTX *provctx = PROV_LIBCTX_OF(ctx->provctx);
+    const EVP_MD *md;
 
     if (params == NULL)
         return 1;
 
     if (!ossl_prov_digest_load_from_params(&ctx->digest, params, provctx))
         return 0;
+
+    md = ossl_prov_digest_md(&ctx->digest);
+    if (md != NULL && !ossl_digest_is_allowed(provctx, md)) {
+        ERR_raise(ERR_LIB_PROV, PROV_R_DIGEST_NOT_ALLOWED);
+        ossl_prov_digest_reset(&ctx->digest);
+        return 0;
+    }
 
     if ((p = OSSL_PARAM_locate_const(params, OSSL_KDF_PARAM_KEY)) != NULL)
         if (!sshkdf_set_membuf(&ctx->key, &ctx->key_len, p))

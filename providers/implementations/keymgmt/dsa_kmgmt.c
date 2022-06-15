@@ -17,6 +17,7 @@
 #include <openssl/core_names.h>
 #include <openssl/bn.h>
 #include <openssl/err.h>
+#include <openssl/proverr.h>
 #include "prov/providercommon.h"
 #include "prov/implementations.h"
 #include "prov/provider_ctx.h"
@@ -24,6 +25,7 @@
 #include "internal/sizes.h"
 #include "internal/nelem.h"
 #include "internal/param_build_set.h"
+#include "prov/securitycheck.h"
 
 static OSSL_FUNC_keymgmt_new_fn dsa_newdata;
 static OSSL_FUNC_keymgmt_free_fn dsa_freedata;
@@ -513,6 +515,15 @@ static int dsa_gen_set_params(void *genctx, const OSSL_PARAM params[])
         gctx->mdprops = OPENSSL_strdup(p->data);
         if (gctx->mdprops == NULL)
             return 0;
+    }
+    if (gctx->mdname != NULL) {
+        EVP_MD *md = EVP_MD_fetch(gctx->libctx, gctx->mdname, gctx->mdprops);
+        if (!ossl_digest_is_allowed(gctx->libctx, md)) {
+            ERR_raise(ERR_LIB_PROV, PROV_R_DIGEST_NOT_ALLOWED);
+            EVP_MD_free(md);
+            return 0;
+        }
+        EVP_MD_free(md);
     }
     return 1;
 }

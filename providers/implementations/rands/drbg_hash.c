@@ -21,6 +21,7 @@
 #include "prov/provider_ctx.h"
 #include "prov/provider_util.h"
 #include "prov/implementations.h"
+#include "prov/securitycheck.h"
 #include "drbg_local.h"
 
 static OSSL_FUNC_rand_newctx_fn drbg_hash_new_wrapper;
@@ -468,6 +469,11 @@ static int drbg_hash_set_ctx_params(void *vctx, const OSSL_PARAM params[])
 
     md = ossl_prov_digest_md(&hash->digest);
     if (md != NULL) {
+        if (!ossl_digest_is_allowed(libctx, md)) {
+            ERR_raise(ERR_LIB_PROV, PROV_R_DIGEST_NOT_ALLOWED);
+            ossl_prov_digest_reset(&hash->digest);
+            return 0;
+        }
         if ((EVP_MD_get_flags(md) & EVP_MD_FLAG_XOF) != 0) {
             ERR_raise(ERR_LIB_PROV, PROV_R_XOF_DIGESTS_NOT_ALLOWED);
             return 0;

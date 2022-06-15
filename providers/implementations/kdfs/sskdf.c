@@ -50,6 +50,7 @@
 #include "prov/providercommon.h"
 #include "prov/implementations.h"
 #include "prov/provider_util.h"
+#include "prov/securitycheck.h"
 
 typedef struct {
     void *provctx;
@@ -449,12 +450,20 @@ static int sskdf_set_ctx_params(void *vctx, const OSSL_PARAM params[])
     KDF_SSKDF *ctx = vctx;
     OSSL_LIB_CTX *libctx = PROV_LIBCTX_OF(ctx->provctx);
     size_t sz;
+    const EVP_MD *md;
 
     if (params == NULL)
         return 1;
 
     if (!ossl_prov_digest_load_from_params(&ctx->digest, params, libctx))
         return 0;
+
+    md = ossl_prov_digest_md(&ctx->digest);
+    if (md != NULL && !ossl_digest_is_allowed(libctx, md)) {
+        ERR_raise(ERR_LIB_PROV, PROV_R_DIGEST_NOT_ALLOWED);
+        ossl_prov_digest_reset(&ctx->digest);
+        return 0;
+    }
 
     if (!ossl_prov_macctx_load_from_params(&ctx->macctx, params,
                                            NULL, NULL, NULL, libctx))

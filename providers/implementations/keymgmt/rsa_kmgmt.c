@@ -63,6 +63,10 @@ static int pss_params_fromdata(RSA_PSS_PARAMS_30 *pss_params, int *defaults_set,
                                const OSSL_PARAM params[], int rsa_type,
                                OSSL_LIB_CTX *libctx)
 {
+    /*
+     * We don't check the digest algorithm here because crypto/rsa has an
+     * allowlist (see crypto/rsa/rsa_schemes.c).
+     */
     if (!ossl_rsa_pss_params_30_fromdata(pss_params, defaults_set,
                                          params, libctx))
         return 0;

@@ -28,6 +28,7 @@
 #include "prov/providercommon.h"
 #include "prov/implementations.h"
 #include "prov/provider_util.h"
+#include "prov/securitycheck.h"
 #include "pbkdf2.h"
 
 /* Constants specified in SP800-132 */
@@ -173,12 +174,20 @@ static int kdf_pbkdf2_set_ctx_params(void *vctx, const OSSL_PARAM params[])
     OSSL_LIB_CTX *provctx = PROV_LIBCTX_OF(ctx->provctx);
     int pkcs5;
     uint64_t iter, min_iter;
+    const EVP_MD *md;
 
     if (params == NULL)
         return 1;
 
     if (!ossl_prov_digest_load_from_params(&ctx->digest, params, provctx))
         return 0;
+
+    md = ossl_prov_digest_md(&ctx->digest);
+    if (md != NULL && !ossl_digest_is_allowed(provctx, md)) {
+        ERR_raise(ERR_LIB_PROV, PROV_R_DIGEST_NOT_ALLOWED);
+        ossl_prov_digest_reset(&ctx->digest);
+        return 0;
+    }
 
     if ((p = OSSL_PARAM_locate_const(params, OSSL_KDF_PARAM_PKCS5)) != NULL) {
         if (!OSSL_PARAM_get_int(p, &pkcs5))

@@ -22,6 +22,7 @@
 #include "prov/implementations.h"
 #include "prov/provider_util.h"
 #include "prov/der_wrap.h"
+#include "prov/securitycheck.h"
 
 #define X942KDF_MAX_INLEN (1 << 30)
 
@@ -474,11 +475,19 @@ static int x942kdf_set_ctx_params(void *vctx, const OSSL_PARAM params[])
     OSSL_LIB_CTX *provctx = PROV_LIBCTX_OF(ctx->provctx);
     const char *propq = NULL;
     size_t id;
+    const EVP_MD *md;
 
     if (params == NULL)
         return 1;
     if (!ossl_prov_digest_load_from_params(&ctx->digest, params, provctx))
         return 0;
+
+    md = ossl_prov_digest_md(&ctx->digest);
+    if (md != NULL && !ossl_digest_is_allowed(provctx, md)) {
+        ERR_raise(ERR_LIB_PROV, PROV_R_DIGEST_NOT_ALLOWED);
+        ossl_prov_digest_reset(&ctx->digest);
+        return 0;
+    }
 
     p = OSSL_PARAM_locate_const(params, OSSL_KDF_PARAM_SECRET);
     if (p == NULL)
