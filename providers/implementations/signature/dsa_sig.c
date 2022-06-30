@@ -228,10 +228,10 @@ static int dsa_verify_init(void *vpdsactx, void *vdsa,
     return dsa_signverify_init(vpdsactx, vdsa, params, EVP_PKEY_OP_VERIFY);
 }
 
-static int dsa_sign(void *vpdsactx, unsigned char *sig, size_t *siglen,
-                    size_t sigsize, const unsigned char *tbs, size_t tbslen)
+static int dsa_sign_int(PROV_DSA_CTX *pdsactx, unsigned char *sig,
+                        size_t *siglen, size_t sigsize,
+                        const unsigned char *tbs, size_t tbslen)
 {
-    PROV_DSA_CTX *pdsactx = (PROV_DSA_CTX *)vpdsactx;
     int ret;
     unsigned int sltmp;
     size_t dsasize = DSA_size(pdsactx->dsa);
@@ -261,10 +261,18 @@ static int dsa_sign(void *vpdsactx, unsigned char *sig, size_t *siglen,
     return 1;
 }
 
-static int dsa_verify(void *vpdsactx, const unsigned char *sig, size_t siglen,
-                      const unsigned char *tbs, size_t tbslen)
+static int dsa_sign(void *vpdsactx, unsigned char *sig, size_t *siglen,
+                    size_t sigsize, const unsigned char *tbs, size_t tbslen)
 {
     PROV_DSA_CTX *pdsactx = (PROV_DSA_CTX *)vpdsactx;
+    ossl_record_fips_unapproved_usage(pdsactx->libctx);
+    return dsa_sign_int(pdsactx, sig, siglen, sigsize, tbs, tbslen);
+}
+
+static int dsa_verify_int(PROV_DSA_CTX *pdsactx, const unsigned char *sig,
+                          size_t siglen, const unsigned char *tbs,
+                          size_t tbslen)
+{
     size_t mdsize = dsa_get_md_size(pdsactx);
 
     ossl_record_fips_unapproved_dsa_key_usage(pdsactx->libctx, pdsactx->dsa, 0);
@@ -273,6 +281,14 @@ static int dsa_verify(void *vpdsactx, const unsigned char *sig, size_t siglen,
         return 0;
 
     return DSA_verify(0, tbs, tbslen, sig, siglen, pdsactx->dsa);
+}
+
+static int dsa_verify(void *vpdsactx, const unsigned char *sig, size_t siglen,
+                      const unsigned char *tbs, size_t tbslen)
+{
+    PROV_DSA_CTX *pdsactx = (PROV_DSA_CTX *)vpdsactx;
+    ossl_record_fips_unapproved_usage(pdsactx->libctx);
+    return dsa_verify_int(pdsactx, sig, siglen, tbs, tbslen);
 }
 
 static int dsa_digest_signverify_init(void *vpdsactx, const char *mdname,
@@ -367,7 +383,7 @@ int dsa_digest_sign_final(void *vpdsactx, unsigned char *sig, size_t *siglen,
 
     pdsactx->flag_allow_md = 1;
 
-    return dsa_sign(vpdsactx, sig, siglen, sigsize, digest, (size_t)dlen);
+    return dsa_sign_int(pdsactx, sig, siglen, sigsize, digest, (size_t)dlen);
 }
 
 
@@ -398,7 +414,7 @@ int dsa_digest_verify_final(void *vpdsactx, const unsigned char *sig,
 
     pdsactx->flag_allow_md = 1;
 
-    return dsa_verify(vpdsactx, sig, siglen, digest, (size_t)dlen);
+    return dsa_verify_int(pdsactx, sig, siglen, digest, (size_t)dlen);
 }
 
 static void dsa_freectx(void *vpdsactx)
