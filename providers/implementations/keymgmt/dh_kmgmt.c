@@ -417,6 +417,13 @@ static int dh_validate(const void *keydata, int selection, int checktype)
         return 1; /* nothing to validate */
 
     if ((selection & OSSL_KEYMGMT_SELECT_DOMAIN_PARAMETERS) != 0) {
+        OSSL_LIB_CTX *ctx = ossl_dh_get0_libctx((DH *)dh);
+        FFC_PARAMS *ffc = ossl_dh_get0_params((DH *)dh);
+        if (ffc->mdname != NULL) {
+            EVP_MD *md = EVP_MD_fetch(ctx, ffc->mdname, ffc->mdprops);
+            ossl_record_fips_unapproved_digest_usage(ctx, md, 1);
+            EVP_MD_free(md);
+        }
         /*
          * Both of these functions check parameters. DH_check_params_ex()
          * performs a lightweight check (e.g. it does not check that p is a
@@ -748,6 +755,9 @@ static void *dh_gen(void *genctx, OSSL_CALLBACK *osslcb, void *cbarg)
             ossl_ffc_params_set_h(ffc, gctx->hindex);
         }
         if (gctx->mdname != NULL) {
+            EVP_MD *md = EVP_MD_fetch(gctx->libctx, gctx->mdname, gctx->mdprops);
+            ossl_record_fips_unapproved_digest_usage(gctx->libctx, md, 1);
+            EVP_MD_free(md);
             if (!ossl_ffc_set_digest(ffc, gctx->mdname, gctx->mdprops))
                 goto end;
         }

@@ -201,6 +201,11 @@ static int dh_X9_42_kdf_derive(void *vpdhctx, unsigned char *secret,
     if (!dh_plain_derive(pdhctx, stmp, &stmplen, stmplen, 1))
         goto err;
 
+    /*
+     * XXX: The KDF implementation checks that the digest algorithm is ok,
+     * so it's not checked here.
+     */
+
     /* Do KDF stuff */
     if (pdhctx->kdf_type == PROV_DH_KDF_X9_42_ASN1) {
         if (!ossl_dh_kdf_X9_42_asn1(secret, pdhctx->kdf_outlen,
@@ -223,6 +228,8 @@ static int dh_derive(void *vpdhctx, unsigned char *secret,
                      size_t *psecretlen, size_t outlen)
 {
     PROV_DH_CTX *pdhctx = (PROV_DH_CTX *)vpdhctx;
+
+    ossl_record_fips_unapproved_dh_key_usage(pdhctx->libctx, pdhctx->dh);
 
     if (!ossl_prov_is_running())
         return 0;

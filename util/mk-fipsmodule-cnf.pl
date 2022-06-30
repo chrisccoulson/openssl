@@ -17,7 +17,8 @@ my $section_name = "fips_sect";
 
 GetOptions("key=s"              => \$mac_key,
            "module=s"           => \$module_name,
-           "section_name=s"     => \$section_name)
+           "section_name=s"     => \$section_name,
+           "security_checks!"   => \$security_checks)
     or die "Error when getting command line arguments";
 
 my $mac_keylen = length($mac_key);

@@ -20,6 +20,7 @@
 #include "prov/securitycheck.h"
 
 int FIPS_security_check_enabled(OSSL_LIB_CTX *libctx);
+int FIPS_record_unapproved_usage(OSSL_LIB_CTX *libctx);
 
 int ossl_securitycheck_enabled(OSSL_LIB_CTX *libctx)
 {
@@ -30,12 +31,16 @@ int ossl_securitycheck_enabled(OSSL_LIB_CTX *libctx)
 #endif /* OPENSSL_NO_FIPS_SECURITYCHECKS */
 }
 
+int ossl_record_fips_unapproved_usage(OSSL_LIB_CTX *libctx)
+{
+    return FIPS_record_unapproved_usage(libctx);
+}
+
 int ossl_digest_rsa_sign_get_md_nid(OSSL_LIB_CTX *ctx, const EVP_MD *md,
                                     int sha1_allowed)
 {
 #if !defined(OPENSSL_NO_FIPS_SECURITYCHECKS)
-    if (ossl_securitycheck_enabled(ctx))
-        return ossl_digest_get_approved_nid_with_sha1(ctx, md, sha1_allowed);
+    return ossl_digest_get_approved_nid_with_sha1(ctx, md, sha1_allowed);
 #endif /* OPENSSL_NO_FIPS_SECURITYCHECKS */
     return ossl_digest_get_approved_nid(md);
 }

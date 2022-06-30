@@ -22,6 +22,11 @@ int ossl_securitycheck_enabled(OSSL_LIB_CTX *libctx)
     return 0;
 }
 
+int ossl_record_fips_unapproved_usage(OSSL_LIB_CTX *libctx)
+{
+    return 1;
+}
+
 int ossl_digest_rsa_sign_get_md_nid(OSSL_LIB_CTX *ctx, const EVP_MD *md,
                                     ossl_unused int sha1_allowed)
 {

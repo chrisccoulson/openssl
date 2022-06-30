@@ -23,6 +23,7 @@
 #include <openssl/err.h>
 #include "crypto/rsa.h"
 #include <openssl/proverr.h>
+#include "prov/providercommon.h"
 #include "prov/provider_ctx.h"
 #include "prov/implementations.h"
 #include "prov/securitycheck.h"
@@ -321,6 +322,12 @@ static int rsakem_generate(void *vprsactx, unsigned char *out, size_t *outlen,
 {
     PROV_RSA_CTX *prsactx = (PROV_RSA_CTX *)vprsactx;
 
+    ossl_record_fips_unapproved_rsa_key_usage(prsactx->libctx, prsactx->rsa,
+                                              EVP_PKEY_OP_ENCAPSULATE);
+
+    if (!ossl_prov_is_running())
+        return 0;
+
     switch (prsactx->op) {
         case KEM_OP_RSASVE:
             return rsasve_generate(prsactx, out, outlen, secret, secretlen);
@@ -333,6 +340,12 @@ static int rsakem_recover(void *vprsactx, unsigned char *out, size_t *outlen,
                           const unsigned char *in, size_t inlen)
 {
     PROV_RSA_CTX *prsactx = (PROV_RSA_CTX *)vprsactx;
+
+    ossl_record_fips_unapproved_rsa_key_usage(prsactx->libctx, prsactx->rsa,
+                                              EVP_PKEY_OP_DECAPSULATE);
+
+    if (!ossl_prov_is_running())
+        return 0;
 
     switch (prsactx->op) {
         case KEM_OP_RSASVE:

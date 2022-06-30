@@ -174,6 +174,8 @@ static int ecdsa_sign(void *vctx, unsigned char *sig, size_t *siglen,
     unsigned int sltmp;
     size_t ecsize = ECDSA_size(ctx->ec);
 
+    ossl_record_fips_unapproved_ec_key_usage(ctx->libctx, ctx->ec, 1);
+
     if (!ossl_prov_is_running())
         return 0;
 
@@ -205,6 +207,8 @@ static int ecdsa_verify(void *vctx, const unsigned char *sig, size_t siglen,
                         const unsigned char *tbs, size_t tbslen)
 {
     PROV_ECDSA_CTX *ctx = (PROV_ECDSA_CTX *)vctx;
+
+    ossl_record_fips_unapproved_ec_key_usage(ctx->libctx, ctx->ec, 0);
 
     if (!ossl_prov_is_running() || (ctx->mdsize != 0 && tbslen != ctx->mdsize))
         return 0;
@@ -340,7 +344,13 @@ int ecdsa_digest_sign_final(void *vctx, unsigned char *sig, size_t *siglen,
     unsigned char digest[EVP_MAX_MD_SIZE];
     unsigned int dlen = 0;
 
-    if (!ossl_prov_is_running() || ctx == NULL || ctx->mdctx == NULL)
+    if (ctx == NULL)
+        return 0;
+
+    ossl_record_fips_unapproved_digest_usage(ctx->libctx,
+                                             EVP_MD_CTX_get0_md(ctx->mdctx), 0);
+
+    if (!ossl_prov_is_running() || ctx->mdctx == NULL)
         return 0;
 
     /*
@@ -361,7 +371,13 @@ int ecdsa_digest_verify_final(void *vctx, const unsigned char *sig,
     unsigned char digest[EVP_MAX_MD_SIZE];
     unsigned int dlen = 0;
 
-    if (!ossl_prov_is_running() || ctx == NULL || ctx->mdctx == NULL)
+    if (ctx == NULL)
+        return 0;
+
+    ossl_record_fips_unapproved_digest_usage(ctx->libctx,
+                                             EVP_MD_CTX_get0_md(ctx->mdctx), 1);
+
+    if (!ossl_prov_is_running() || ctx->mdctx == NULL)
         return 0;
 
     if (!EVP_DigestFinal_ex(ctx->mdctx, digest, &dlen))

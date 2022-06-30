@@ -162,6 +162,10 @@ static int kdf_pbkdf2_derive(void *vctx, unsigned char *key, size_t keylen,
     }
 
     md = ossl_prov_digest_md(&ctx->digest);
+    /*
+     * XXX: The HMAC implementation rejects XOF digests even if securitycheck
+     * is disabled, so no need to check for an unapproved digest here.
+     */
     return pbkdf2_derive((char *)ctx->pass, ctx->pass_len,
                          ctx->salt, ctx->salt_len, ctx->iter,
                          md, key, keylen, ctx->lower_bound_checks);

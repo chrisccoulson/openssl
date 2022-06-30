@@ -28,3 +28,22 @@ int ossl_digest_get_approved_nid(const EVP_MD *md);
 int ossl_digest_rsa_sign_get_md_nid(OSSL_LIB_CTX *ctx, const EVP_MD *md,
                                     int sha1_allowed);
 int ossl_securitycheck_enabled(OSSL_LIB_CTX *libctx);
+
+/*
+ * FIPS status indicator trggers. Note that if any of these are unable to
+ * update the status indicator then they put the module into error mode. It is
+ * not necessary to check the return if there is a subsequent call to
+ * ossl_prov_is_running.
+ */
+int ossl_record_fips_unapproved_usage(OSSL_LIB_CTX *libctx);
+/* These are conditional triggers */
+int ossl_record_fips_unapproved_rsa_key_usage(OSSL_LIB_CTX *libctx,
+                                              const RSA *rsa, int operation);
+int ossl_record_fips_unapproved_ec_key_usage(OSSL_LIB_CTX *libctx,
+                                             const EC_KEY *ec, int protect);
+int ossl_record_fips_unapproved_dsa_key_usage(OSSL_LIB_CTX *libctx,
+                                              const DSA *dsa, int sign);
+int ossl_record_fips_unapproved_dh_key_usage(OSSL_LIB_CTX *ctx, const DH *dh);
+int ossl_record_fips_unapproved_digest_usage(OSSL_LIB_CTX *ctx,
+                                             const EVP_MD *md,
+                                             int sha1_allowed);

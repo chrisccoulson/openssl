@@ -530,6 +530,11 @@ int ecdh_X9_63_kdf_derive(void *vpecdhctx, unsigned char *secret,
     if (!ecdh_plain_derive(vpecdhctx, stmp, &stmplen, stmplen))
         goto err;
 
+    /*
+     * XXX: The KDF implementation checks that the digest algorithm is ok,
+     * so it's not checked here.
+     */
+
     /* Do KDF stuff */
     if (!ossl_ecdh_kdf_X9_63(secret, pecdhctx->kdf_outlen,
                              stmp, stmplen,
@@ -551,6 +556,13 @@ int ecdh_derive(void *vpecdhctx, unsigned char *secret,
                 size_t *psecretlen, size_t outlen)
 {
     PROV_ECDH_CTX *pecdhctx = (PROV_ECDH_CTX *)vpecdhctx;
+
+    ossl_record_fips_unapproved_ec_key_usage(pecdhctx->libctx, pecdhctx->k, 1);
+    ossl_record_fips_unapproved_ec_key_usage(pecdhctx->libctx, pecdhctx->peerk,
+                                             1);
+
+    if (!ossl_prov_is_running())
+        return 0;
 
     switch (pecdhctx->kdf_type) {
         case PROV_ECDH_KDF_NONE:
