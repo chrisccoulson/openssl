@@ -511,10 +511,10 @@ static int rsa_sign_init(void *vprsactx, void *vrsa, const OSSL_PARAM params[])
     return rsa_signverify_init(vprsactx, vrsa, params, EVP_PKEY_OP_SIGN);
 }
 
-static int rsa_sign(void *vprsactx, unsigned char *sig, size_t *siglen,
-                    size_t sigsize, const unsigned char *tbs, size_t tbslen)
+static int rsa_sign_int(PROV_RSA_CTX *prsactx, unsigned char *sig,
+                        size_t *siglen, size_t sigsize,
+                        const unsigned char *tbs, size_t tbslen)
 {
-    PROV_RSA_CTX *prsactx = (PROV_RSA_CTX *)vprsactx;
     int ret;
     size_t rsasize = RSA_size(prsactx->rsa);
     size_t mdsize = rsa_get_md_size(prsactx);
@@ -664,6 +664,14 @@ static int rsa_sign(void *vprsactx, unsigned char *sig, size_t *siglen,
     return 1;
 }
 
+static int rsa_sign(void *vprsactx, unsigned char *sig, size_t *siglen,
+                    size_t sigsize, const unsigned char *tbs, size_t tbslen)
+{
+    PROV_RSA_CTX *prsactx = (PROV_RSA_CTX *)vprsactx;
+    ossl_record_fips_unapproved_usage(prsactx->libctx);
+    return rsa_sign_int(prsactx, sig, siglen, sigsize, tbs, tbslen);
+}
+
 static int rsa_verify_recover_init(void *vprsactx, void *vrsa,
                                    const OSSL_PARAM params[])
 {
@@ -768,10 +776,10 @@ static int rsa_verify_init(void *vprsactx, void *vrsa,
     return rsa_signverify_init(vprsactx, vrsa, params, EVP_PKEY_OP_VERIFY);
 }
 
-static int rsa_verify(void *vprsactx, const unsigned char *sig, size_t siglen,
-                      const unsigned char *tbs, size_t tbslen)
+static int rsa_verify_int(PROV_RSA_CTX *prsactx, const unsigned char *sig,
+                          size_t siglen, const unsigned char *tbs,
+                          size_t tbslen)
 {
-    PROV_RSA_CTX *prsactx = (PROV_RSA_CTX *)vprsactx;
     size_t rslen;
 
     ossl_record_fips_unapproved_rsa_key_usage(prsactx->libctx, prsactx->rsa,
@@ -855,6 +863,14 @@ static int rsa_verify(void *vprsactx, const unsigned char *sig, size_t siglen,
         return 0;
 
     return 1;
+}
+
+static int rsa_verify(void *vprsactx, const unsigned char *sig, size_t siglen,
+                      const unsigned char *tbs, size_t tbslen)
+{
+    PROV_RSA_CTX *prsactx = (PROV_RSA_CTX *)vprsactx;
+    ossl_record_fips_unapproved_usage(prsactx->libctx);
+    return rsa_verify_int(prsactx, sig, siglen, tbs, tbslen);
 }
 
 static int rsa_digest_signverify_init(void *vprsactx, const char *mdname,
@@ -948,7 +964,7 @@ static int rsa_digest_sign_final(void *vprsactx, unsigned char *sig,
             return 0;
     }
 
-    return rsa_sign(vprsactx, sig, siglen, sigsize, digest, (size_t)dlen);
+    return rsa_sign_int(prsactx, sig, siglen, sigsize, digest, (size_t)dlen);
 }
 
 static int rsa_digest_verify_init(void *vprsactx, const char *mdname,
@@ -988,7 +1004,7 @@ int rsa_digest_verify_final(void *vprsactx, const unsigned char *sig,
     if (!EVP_DigestFinal_ex(prsactx->mdctx, digest, &dlen))
         return 0;
 
-    return rsa_verify(vprsactx, sig, siglen, digest, (size_t)dlen);
+    return rsa_verify_int(prsactx, sig, siglen, digest, (size_t)dlen);
 }
 
 static void rsa_freectx(void *vprsactx)

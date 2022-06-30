@@ -166,10 +166,10 @@ static int ecdsa_verify_init(void *vctx, void *ec, const OSSL_PARAM params[])
     return ecdsa_signverify_init(vctx, ec, params, EVP_PKEY_OP_VERIFY);
 }
 
-static int ecdsa_sign(void *vctx, unsigned char *sig, size_t *siglen,
-                      size_t sigsize, const unsigned char *tbs, size_t tbslen)
+static int ecdsa_sign_int(PROV_ECDSA_CTX *ctx, unsigned char *sig,
+                          size_t *siglen, size_t sigsize,
+                          const unsigned char *tbs, size_t tbslen)
 {
-    PROV_ECDSA_CTX *ctx = (PROV_ECDSA_CTX *)vctx;
     int ret;
     unsigned int sltmp;
     size_t ecsize = ECDSA_size(ctx->ec);
@@ -203,17 +203,32 @@ static int ecdsa_sign(void *vctx, unsigned char *sig, size_t *siglen,
     return 1;
 }
 
-static int ecdsa_verify(void *vctx, const unsigned char *sig, size_t siglen,
-                        const unsigned char *tbs, size_t tbslen)
+static int ecdsa_sign(void *vctx, unsigned char *sig, size_t *siglen,
+                      size_t sigsize, const unsigned char *tbs, size_t tbslen)
 {
     PROV_ECDSA_CTX *ctx = (PROV_ECDSA_CTX *)vctx;
+    ossl_record_fips_unapproved_usage(ctx->libctx);
+    return ecdsa_sign_int(ctx, sig, siglen, sigsize, tbs, tbslen);
+}
 
+static int ecdsa_verify_int(PROV_ECDSA_CTX *ctx, const unsigned char *sig,
+                            size_t siglen, const unsigned char *tbs,
+                            size_t tbslen)
+{
     ossl_record_fips_unapproved_ec_key_usage(ctx->libctx, ctx->ec, 0);
 
     if (!ossl_prov_is_running() || (ctx->mdsize != 0 && tbslen != ctx->mdsize))
         return 0;
 
     return ECDSA_verify(0, tbs, tbslen, sig, siglen, ctx->ec);
+}
+
+static int ecdsa_verify(void *vctx, const unsigned char *sig, size_t siglen,
+                        const unsigned char *tbs, size_t tbslen)
+{
+    PROV_ECDSA_CTX *ctx = (PROV_ECDSA_CTX *)vctx;
+    ossl_record_fips_unapproved_usage(ctx->libctx);
+    return ecdsa_verify_int(ctx, sig, siglen, tbs, tbslen);
 }
 
 static int ecdsa_setup_md(PROV_ECDSA_CTX *ctx, const char *mdname,
@@ -361,7 +376,7 @@ int ecdsa_digest_sign_final(void *vctx, unsigned char *sig, size_t *siglen,
         && !EVP_DigestFinal_ex(ctx->mdctx, digest, &dlen))
         return 0;
     ctx->flag_allow_md = 1;
-    return ecdsa_sign(vctx, sig, siglen, sigsize, digest, (size_t)dlen);
+    return ecdsa_sign_int(ctx, sig, siglen, sigsize, digest, (size_t)dlen);
 }
 
 int ecdsa_digest_verify_final(void *vctx, const unsigned char *sig,
@@ -383,7 +398,7 @@ int ecdsa_digest_verify_final(void *vctx, const unsigned char *sig,
     if (!EVP_DigestFinal_ex(ctx->mdctx, digest, &dlen))
         return 0;
     ctx->flag_allow_md = 1;
-    return ecdsa_verify(ctx, sig, siglen, digest, (size_t)dlen);
+    return ecdsa_verify_int(ctx, sig, siglen, digest, (size_t)dlen);
 }
 
 static void ecdsa_freectx(void *vctx)

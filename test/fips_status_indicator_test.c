@@ -1135,6 +1135,93 @@ static int test_paramgen(int n)
     return ok;
 }
 
+typedef struct RAW_SIGN_AND_VERIFY_DATA_st {
+    const unsigned char *key;
+    size_t keylen;
+} RAW_SIGN_AND_VERIFY_DATA;
+
+static const RAW_SIGN_AND_VERIFY_DATA raw_sign_and_verify_data[] = {
+    {kExampleRSA2048KeyDER, sizeof(kExampleRSA2048KeyDER)},
+    {kExampleP256ECKeyDER, sizeof(kExampleP256ECKeyDER)},
+    {kExampleDSA2048KeyDER, sizeof(kExampleDSA2048KeyDER)},
+};
+
+static int test_raw_sign_and_verify(int n)
+{
+    const RAW_SIGN_AND_VERIFY_DATA *data = &raw_sign_and_verify_data[n];
+    const unsigned char *key = data->key;
+    size_t keylen = data->keylen;
+    const unsigned char dgst[SHA256_DIGEST_LENGTH] = {0};
+    size_t dgstlen = sizeof(dgst);
+    OSSL_DECODER_CTX *dctx = NULL;
+    EVP_PKEY *pkey = NULL;
+    EVP_PKEY_CTX *pctx = NULL;
+    unsigned char *sig = NULL;
+    size_t siglen;
+    const char *errmsg = NULL;
+    int ok = 0;
+
+    if (!TEST_ptr(dctx = OSSL_DECODER_CTX_new_for_pkey(&pkey, NULL,
+                                                       NULL, NULL,
+                                                       OSSL_KEYMGMT_SELECT_ALL,
+                                                       NULL, NULL)))
+        goto err;
+    if (!TEST_true(OSSL_DECODER_from_data(dctx, &key, &keylen)))
+        goto err;
+    if (!TEST_ptr(pctx = EVP_PKEY_CTX_new_from_pkey(NULL, pkey, NULL)))
+        goto err;
+    if (!TEST_true(EVP_PKEY_sign_init(pctx)))
+        goto err;
+
+    if (!test_unapproved(0)) {
+        errmsg = "expected approved state at start of test";
+        goto err;
+    }
+
+    if (!TEST_true(EVP_PKEY_sign(pctx, NULL, &siglen, dgst, dgstlen)))
+        goto err;
+    if (!TEST_ptr(sig = OPENSSL_malloc(siglen)))
+        goto err;
+    if (!TEST_true(EVP_PKEY_sign(pctx, sig, &siglen, dgst, dgstlen)))
+        goto err;
+
+    if (!test_unapproved(1)) {
+        errmsg = "expected unapproved state after sign";
+        goto err;
+    }
+    if (!test_unapproved(0)) {
+        errmsg = "expected approved state after sign";
+        goto err;
+    }
+
+    if (!TEST_true(EVP_PKEY_verify_init(pctx)))
+        goto err;
+    if (!TEST_true(EVP_PKEY_verify(pctx, sig, siglen, dgst, dgstlen)))
+        goto err;
+
+    if (!test_unapproved(1)) {
+        errmsg = "expected unapproved state after verify";
+        goto err;
+    }
+    if (!test_unapproved(0)) {
+        errmsg = "expected approved state after verify";
+        goto err;
+    }
+
+    ok = 1;
+
+ err:
+    OPENSSL_free(sig);
+    EVP_PKEY_CTX_free(pctx);
+    EVP_PKEY_free(pkey);
+    OSSL_DECODER_CTX_free(dctx);
+
+    if (!ok && errmsg != NULL)
+        TEST_info("%s", errmsg);
+
+    return ok;
+}
+
 typedef enum OPTION_choice {
     OPT_ERR = -1,
     OPT_EOF = 0,
@@ -1193,6 +1280,8 @@ int setup_tests(void)
     ADD_ALL_TESTS(test_ka, OSSL_NELEM(ka_data));
     ADD_ALL_TESTS(test_kdf, OSSL_NELEM(kdf_data));
     ADD_ALL_TESTS(test_paramgen, OSSL_NELEM(paramgen_data));
+    ADD_ALL_TESTS(test_raw_sign_and_verify,
+                  OSSL_NELEM(raw_sign_and_verify_data));
 
     return 1;
 }
