@@ -328,3 +328,8 @@ int ossl_dh_get0_nid(const DH *dh)
 {
     return dh->params.nid;
 }
+
+OSSL_LIB_CTX *ossl_dh_get0_libctx(DH *dh)
+{
+    return dh->libctx;
+}

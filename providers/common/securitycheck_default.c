@@ -22,6 +22,41 @@ int ossl_securitycheck_enabled(OSSL_LIB_CTX *libctx)
     return 0;
 }
 
+int ossl_record_fips_unapproved_usage(OSSL_LIB_CTX *libctx)
+{
+    return 1;
+}
+
+int ossl_record_fips_unapproved_rsa_key_usage(OSSL_LIB_CTX *libctx,
+                                              const RSA *rsa, int operation)
+{
+    return 1;
+}
+
+int ossl_record_fips_unapproved_ec_key_usage(OSSL_LIB_CTX *libctx,
+                                             const EC_KEY *ec, int protect)
+{
+    return 1;
+}
+
+int ossl_record_fips_unapproved_dsa_key_usage(OSSL_LIB_CTX *libctx,
+                                              const DSA *dsa, int sign)
+{
+    return 1;
+}
+
+int ossl_record_fips_unapproved_dh_key_usage(OSSL_LIB_CTX *ctx, const DH *dh)
+{
+    return 1;
+}
+
+int ossl_record_fips_unapproved_digest_usage(OSSL_LIB_CTX *ctx,
+                                             const EVP_MD *md,
+                                             int sha1_allowed)
+{
+    return 1;
+}
+
 int ossl_digest_rsa_sign_get_md_nid(OSSL_LIB_CTX *ctx, const EVP_MD *md,
                                     ossl_unused int sha1_allowed)
 {

@@ -53,6 +53,13 @@ extern "C" {
  */
 # define OSSL_PROV_FIPS_PARAM_SECURITY_CHECKS "security-checks"
 
+/*
+ * The module status indicator for the FIPS provider. This is queried from
+ * the provider.
+ * Type: OSSL_PARAM_INTEGER
+ */
+# define UBUNTU_OSSL_PROV_FIPS_PARAM_UNAPPROVED_USAGE "ubuntu.fips-unapproved-usage"
+
 # ifdef __cplusplus
 }
 # endif

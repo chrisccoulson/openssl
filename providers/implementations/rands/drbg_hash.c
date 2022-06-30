@@ -329,6 +329,10 @@ static int drbg_hash_generate(PROV_DRBG *drbg,
     unsigned char counter[4];
     int reseed_counter = drbg->generate_counter;
 
+    ossl_record_fips_unapproved_digest_usage(PROV_LIBCTX_OF(drbg->provctx),
+                                             ossl_prov_digest_md(&hash->digest),
+                                             1);
+
     counter[0] = (unsigned char)((reseed_counter >> 24) & 0xff);
     counter[1] = (unsigned char)((reseed_counter >> 16) & 0xff);
     counter[2] = (unsigned char)((reseed_counter >> 8) & 0xff);

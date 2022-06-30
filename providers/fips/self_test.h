@@ -38,3 +38,5 @@ int SELF_TEST_post(SELF_TEST_POST_PARAMS *st, int on_demand_test);
 int SELF_TEST_kats(OSSL_SELF_TEST *event, OSSL_LIB_CTX *libctx);
 
 void SELF_TEST_disable_conditional_error_state(void);
+
+int SELF_TEST_running_on_this_thread(void);

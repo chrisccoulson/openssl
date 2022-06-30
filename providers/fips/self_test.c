@@ -52,6 +52,7 @@ static int FIPS_conditional_error_check = 1;
 static CRYPTO_RWLOCK *self_test_lock = NULL;
 static CRYPTO_RWLOCK *fips_state_lock = NULL;
 static unsigned char fixed_key[32] = { FIPS_KEY_ELEMENTS };
+static CRYPTO_THREAD_LOCAL self_test_thread_local;
 
 const unsigned char __attribute__((section(".module-checksum"))) module_checksum[32] = {0};
 
@@ -65,6 +66,8 @@ DEFINE_RUN_ONCE_STATIC(do_fips_self_test_init)
      */
     self_test_lock = CRYPTO_THREAD_lock_new();
     fips_state_lock = CRYPTO_THREAD_lock_new();
+    if (!CRYPTO_THREAD_init_local(&self_test_thread_local, NULL))
+        return 0;
     return self_test_lock != NULL;
 }
 
@@ -254,6 +257,12 @@ static void set_fips_state(int state)
     }
 }
 
+static int set_self_test_running_on_this_thread(int running)
+{
+    return CRYPTO_THREAD_set_local(&self_test_thread_local,
+                                   (void *)(uintptr_t)running);
+}
+
 /* This API is triggered either on loading of the FIPS module or on demand */
 int SELF_TEST_post(SELF_TEST_POST_PARAMS *st, int on_demand_test)
 {
@@ -304,6 +313,9 @@ int SELF_TEST_post(SELF_TEST_POST_PARAMS *st, int on_demand_test)
     } else {
         CRYPTO_THREAD_unlock(fips_state_lock);
     }
+
+    if (!set_self_test_running_on_this_thread(1))
+        goto end;
 
     if (st == NULL) {
         ERR_raise(ERR_LIB_PROV, PROV_R_MISSING_CONFIG_DATA);
@@ -375,6 +387,10 @@ int SELF_TEST_post(SELF_TEST_POST_PARAMS *st, int on_demand_test)
             goto end;
         }
     }
+
+    if (!set_self_test_running_on_this_thread(0))
+        goto end;
+
     ok = 1;
 end:
     OSSL_SELF_TEST_free(ev);
@@ -396,6 +412,11 @@ end:
 void SELF_TEST_disable_conditional_error_state(void)
 {
     FIPS_conditional_error_check = 0;
+}
+
+int SELF_TEST_running_on_this_thread(void)
+{
+    return (int)(uintptr_t)CRYPTO_THREAD_get_local(&self_test_thread_local);
 }
 
 void ossl_set_error_state(const char *type)

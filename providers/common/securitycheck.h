@@ -1,0 +1,15 @@
+/*
+ * Copyright 2019-2021 The OpenSSL Project Authors. All Rights Reserved.
+ *
+ * Licensed under the Apache License 2.0 (the "License").  You may not use
+ * this file except in compliance with the License.  You can obtain a copy
+ * in the file LICENSE in the source distribution or at
+ * https://www.openssl.org/source/license.html
+ */
+
+#include "crypto/types.h"
+
+int rsa_check_key_size(const RSA *rsa, int protect);
+int ec_check_key(const EC_KEY *ec, int protect);
+int dsa_check_key(const DSA *dsa, int sign);
+int dh_check_key(const DH *dh);

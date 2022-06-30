@@ -45,6 +45,7 @@ static OSSL_FUNC_provider_query_operation_fn fips_query;
 
 extern OSSL_FUNC_core_thread_start_fn *c_thread_start;
 int FIPS_security_check_enabled(OSSL_LIB_CTX *libctx);
+int FIPS_record_unapproved_usage(OSSL_LIB_CTX *libctx);
 
 /*
  * Should these function pointers be stored in the provider side provctx? Could
@@ -81,6 +82,9 @@ typedef struct fips_global_st {
     SELF_TEST_POST_PARAMS selftest_params;
     int fips_security_checks;
     const char *fips_security_check_option;
+
+    CRYPTO_RWLOCK *fips_unapproved_usage_lock;
+    int fips_unapproved_usage;
 } FIPS_GLOBAL;
 
 static void *fips_prov_ossl_ctx_new(OSSL_LIB_CTX *libctx)
@@ -92,11 +96,20 @@ static void *fips_prov_ossl_ctx_new(OSSL_LIB_CTX *libctx)
     fgbl->fips_security_checks = 1;
     fgbl->fips_security_check_option = "1";
 
+    fgbl->fips_unapproved_usage_lock = CRYPTO_THREAD_lock_new();
+    if (fgbl->fips_unapproved_usage_lock == NULL) {
+        OPENSSL_free(fgbl);
+        return NULL;
+    }
+
     return fgbl;
 }
 
-static void fips_prov_ossl_ctx_free(void *fgbl)
+static void fips_prov_ossl_ctx_free(void *vfgbl)
 {
+    FIPS_GLOBAL *fgbl = (FIPS_GLOBAL *)vfgbl;
+
+    CRYPTO_THREAD_lock_free(fgbl->fips_unapproved_usage_lock);
     OPENSSL_free(fgbl);
 }
 
@@ -114,6 +127,7 @@ static const OSSL_PARAM fips_param_types[] = {
     OSSL_PARAM_DEFN(OSSL_PROV_PARAM_BUILDINFO, OSSL_PARAM_UTF8_PTR, NULL, 0),
     OSSL_PARAM_DEFN(OSSL_PROV_PARAM_STATUS, OSSL_PARAM_INTEGER, NULL, 0),
     OSSL_PARAM_DEFN(OSSL_PROV_PARAM_SECURITY_CHECKS, OSSL_PARAM_INTEGER, NULL, 0),
+    OSSL_PARAM_DEFN(UBUNTU_OSSL_PROV_FIPS_PARAM_UNAPPROVED_USAGE, OSSL_PARAM_INTEGER, NULL, 0),
     OSSL_PARAM_END
 };
 
@@ -197,6 +211,17 @@ static int fips_get_params(void *provctx, OSSL_PARAM params[])
     p = OSSL_PARAM_locate(params, OSSL_PROV_PARAM_SECURITY_CHECKS);
     if (p != NULL && !OSSL_PARAM_set_int(p, fgbl->fips_security_checks))
         return 0;
+    p = OSSL_PARAM_locate(params, UBUNTU_OSSL_PROV_FIPS_PARAM_UNAPPROVED_USAGE);
+    if (p != NULL) {
+        if (!CRYPTO_THREAD_write_lock(fgbl->fips_unapproved_usage_lock))
+            return 0;
+        if (!OSSL_PARAM_set_int(p, fgbl->fips_unapproved_usage)) {
+            CRYPTO_THREAD_unlock(fgbl->fips_unapproved_usage_lock);
+            return 0;
+        }
+        fgbl->fips_unapproved_usage = 0;
+        CRYPTO_THREAD_unlock(fgbl->fips_unapproved_usage_lock);
+    }
     return 1;
 }
 
@@ -904,6 +929,26 @@ int FIPS_security_check_enabled(OSSL_LIB_CTX *libctx)
                                               &fips_prov_ossl_ctx_method);
 
     return fgbl->fips_security_checks;
+}
+
+int FIPS_record_unapproved_usage(OSSL_LIB_CTX *libctx)
+{
+    FIPS_GLOBAL *fgbl = ossl_lib_ctx_get_data(libctx,
+                                              OSSL_LIB_CTX_FIPS_PROV_INDEX,
+                                              &fips_prov_ossl_ctx_method);
+
+    /* Ignore if the current thread is executing self tests */
+    if (SELF_TEST_running_on_this_thread())
+        return 1;
+
+    if (!CRYPTO_THREAD_write_lock(fgbl->fips_unapproved_usage_lock)) {
+        ossl_set_error_state(OSSL_SELF_TEST_TYPE_NONE);
+        return 0;
+    }
+
+    fgbl->fips_unapproved_usage = 1;
+    CRYPTO_THREAD_unlock(fgbl->fips_unapproved_usage_lock);
+    return 1;
 }
 
 void OSSL_SELF_TEST_get_callback(OSSL_LIB_CTX *libctx, OSSL_CALLBACK **cb,

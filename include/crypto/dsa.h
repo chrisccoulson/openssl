@@ -29,6 +29,7 @@ int ossl_dsa_sign_int(int type, const unsigned char *dgst, int dlen,
                       unsigned char *sig, unsigned int *siglen, DSA *dsa);
 
 FFC_PARAMS *ossl_dsa_get0_params(DSA *dsa);
+OSSL_LIB_CTX *ossl_dsa_get0_libctx(DSA *dsa);
 int ossl_dsa_ffc_params_fromdata(DSA *dsa, const OSSL_PARAM params[]);
 int ossl_dsa_key_fromdata(DSA *dsa, const OSSL_PARAM params[],
                           int include_private);

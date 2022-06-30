@@ -360,3 +360,8 @@ int ossl_dsa_ffc_params_fromdata(DSA *dsa, const OSSL_PARAM params[])
         dsa->dirty_cnt++;
     return ret;
 }
+
+OSSL_LIB_CTX *ossl_dsa_get0_libctx(DSA *dsa)
+{
+    return dsa->libctx;
+}

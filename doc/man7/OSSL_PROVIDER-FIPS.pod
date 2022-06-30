@@ -174,6 +174,36 @@ The OpenSSL FIPS provider supports these operations and algorithms:
 
 =back
 
+=head1 STATUS INDICATOR
+
+FIPS 140-3 requires that services provide an indicator when the service uses an
+approved cryptographic algorithm in an approved manner. In most cases, the
+status can be determine implicitly by observing the return code from an
+approved security service call, but the FIPS provider module may permit the
+use of approved cryptographic algorithms in a non-approved manner in some cases.
+For this, the Ubuntu FIPS provider module provides an explicit status indicator
+which is implemented as a gettable provider module parameter, and can be
+accessed using L<OSSL_PROVIDER_get_params(3)> on the B<OSSL_PROVIDER> associated
+with the FIPS provider module.
+
+See L<OSSL_PARAM(3)> for information about passing parameters.
+
+The following B<OSSL_PARAM> key is used for accessing the status indicator:
+
+=over 4
+
+=item "ubuntu.fips-unapproved-usage" (B<UBUNTU_OSSL_PROV_FIPS_PARAM_UNAPPROVED_USAGE>) <integer>
+
+Gets 1 if the L<OSSL_LIB_CTX(3)> associated with the B<OSSL_PROVIDER> has been
+used to execute a security service call that used an approved cryptographic
+algorithm in a non-approved manner inside the FIPS provider module. Querying
+this parameter resets it to 0. Note that this only applies to services inside
+of the FIPS provider module boundary - it cannot indicate whether the
+L<OSSL_LIB_CTX> has been used to execute security service calls in other
+provider modules.
+
+=back
+
 =head1 SELF TESTING
 
 One of the requirements for the FIPS module is self testing. An optional callback

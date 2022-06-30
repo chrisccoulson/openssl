@@ -160,6 +160,11 @@ static int kdf_hkdf_derive(void *vctx, unsigned char *key, size_t keylen,
         ERR_raise(ERR_LIB_PROV, PROV_R_MISSING_MESSAGE_DIGEST);
         return 0;
     }
+    /*
+     * XXX: The HMAC implementation rejects XOF digests even if securitycheck
+     * is disabled, so no need to check for an unapproved digest here.
+     */
+
     if (ctx->key == NULL) {
         ERR_raise(ERR_LIB_PROV, PROV_R_MISSING_KEY);
         return 0;
@@ -640,6 +645,7 @@ static int kdf_tls1_3_derive(void *vctx, unsigned char *key, size_t keylen,
                              const OSSL_PARAM params[])
 {
     KDF_HKDF *ctx = (KDF_HKDF *)vctx;
+    OSSL_LIB_CTX *libctx = PROV_LIBCTX_OF(ctx->provctx);
     const EVP_MD *md;
 
     if (!ossl_prov_is_running() || !kdf_tls1_3_set_ctx_params(ctx, params))
@@ -650,14 +656,17 @@ static int kdf_tls1_3_derive(void *vctx, unsigned char *key, size_t keylen,
         ERR_raise(ERR_LIB_PROV, PROV_R_MISSING_MESSAGE_DIGEST);
         return 0;
     }
+    /*
+     * XXX: The HMAC implementation rejects XOF digests even if securitycheck
+     * is disabled, so no need to check for an unapproved digest here.
+     */
 
     switch (ctx->mode) {
     default:
         return 0;
 
     case EVP_KDF_HKDF_MODE_EXTRACT_ONLY:
-        return prov_tls13_hkdf_generate_secret(PROV_LIBCTX_OF(ctx->provctx),
-                                               md,
+        return prov_tls13_hkdf_generate_secret(libctx, md,
                                                ctx->salt, ctx->salt_len,
                                                ctx->key, ctx->key_len,
                                                ctx->prefix, ctx->prefix_len,

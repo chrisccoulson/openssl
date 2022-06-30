@@ -372,6 +372,11 @@ static int sskdf_derive(void *vctx, unsigned char *key, size_t keylen,
                 ERR_raise(ERR_LIB_PROV, PROV_R_MISSING_MESSAGE_DIGEST);
                 return 0;
             }
+            /*
+             * XXX: The HMAC implementation rejects XOF digests even if
+             * securitycheck is disabled, so no need to check for an unapproved
+             * digest here.
+             */
             default_salt_len = EVP_MD_get_size(md);
             if (default_salt_len <= 0)
                 return 0;
@@ -409,6 +414,8 @@ static int sskdf_derive(void *vctx, unsigned char *key, size_t keylen,
             ERR_raise(ERR_LIB_PROV, PROV_R_MISSING_MESSAGE_DIGEST);
             return 0;
         }
+        ossl_record_fips_unapproved_digest_usage(PROV_LIBCTX_OF(ctx->provctx),
+                                                 md, 1);
         return SSKDF_hash_kdm(md, ctx->secret, ctx->secret_len,
                               ctx->info, ctx->info_len, 0, key, keylen);
     }
@@ -439,6 +446,8 @@ static int x963kdf_derive(void *vctx, unsigned char *key, size_t keylen,
         ERR_raise(ERR_LIB_PROV, PROV_R_MISSING_MESSAGE_DIGEST);
         return 0;
     }
+    ossl_record_fips_unapproved_digest_usage(PROV_LIBCTX_OF(ctx->provctx), md,
+                                             1);
 
     return SSKDF_hash_kdm(md, ctx->secret, ctx->secret_len,
                           ctx->info, ctx->info_len, 1, key, keylen);

@@ -237,6 +237,8 @@ static int dsa_sign(void *vpdsactx, unsigned char *sig, size_t *siglen,
     size_t dsasize = DSA_size(pdsactx->dsa);
     size_t mdsize = dsa_get_md_size(pdsactx);
 
+    ossl_record_fips_unapproved_dsa_key_usage(pdsactx->libctx, pdsactx->dsa, 1);
+
     if (!ossl_prov_is_running())
         return 0;
 
@@ -264,6 +266,8 @@ static int dsa_verify(void *vpdsactx, const unsigned char *sig, size_t siglen,
 {
     PROV_DSA_CTX *pdsactx = (PROV_DSA_CTX *)vpdsactx;
     size_t mdsize = dsa_get_md_size(pdsactx);
+
+    ossl_record_fips_unapproved_dsa_key_usage(pdsactx->libctx, pdsactx->dsa, 0);
 
     if (!ossl_prov_is_running() || (mdsize != 0 && tbslen != mdsize))
         return 0;
@@ -337,7 +341,14 @@ int dsa_digest_sign_final(void *vpdsactx, unsigned char *sig, size_t *siglen,
     unsigned char digest[EVP_MAX_MD_SIZE];
     unsigned int dlen = 0;
 
-    if (!ossl_prov_is_running() || pdsactx == NULL || pdsactx->mdctx == NULL)
+    if (pdsactx == NULL)
+        return 0;
+
+    ossl_record_fips_unapproved_digest_usage(pdsactx->libctx,
+                                             EVP_MD_CTX_get0_md(pdsactx->mdctx),
+                                             0);
+
+    if (!ossl_prov_is_running() || pdsactx->mdctx == NULL)
         return 0;
 
     /*
@@ -367,7 +378,14 @@ int dsa_digest_verify_final(void *vpdsactx, const unsigned char *sig,
     unsigned char digest[EVP_MAX_MD_SIZE];
     unsigned int dlen = 0;
 
-    if (!ossl_prov_is_running() || pdsactx == NULL || pdsactx->mdctx == NULL)
+    if (pdsactx == NULL)
+        return 0;
+
+    ossl_record_fips_unapproved_digest_usage(pdsactx->libctx,
+                                             EVP_MD_CTX_get0_md(pdsactx->mdctx),
+                                             1);
+
+    if (!ossl_prov_is_running() || pdsactx->mdctx == NULL)
         return 0;
 
     /*

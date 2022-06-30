@@ -138,6 +138,17 @@ static int rsa_encrypt(void *vprsactx, unsigned char *out, size_t *outlen,
     PROV_RSA_CTX *prsactx = (PROV_RSA_CTX *)vprsactx;
     int ret;
 
+    ossl_record_fips_unapproved_rsa_key_usage(prsactx->libctx, prsactx->rsa,
+                                              EVP_PKEY_OP_ENCRYPT);
+    if (prsactx->pad_mode == RSA_PKCS1_OAEP_PADDING) {
+        if (prsactx->oaep_md != NULL)
+            ossl_record_fips_unapproved_digest_usage(prsactx->libctx,
+                                                     prsactx->oaep_md, 1);
+        if (prsactx->mgf1_md != NULL)
+            ossl_record_fips_unapproved_digest_usage(prsactx->libctx,
+                                                     prsactx->mgf1_md, 1);
+    }
+
     if (!ossl_prov_is_running())
         return 0;
 
@@ -198,6 +209,17 @@ static int rsa_decrypt(void *vprsactx, unsigned char *out, size_t *outlen,
     PROV_RSA_CTX *prsactx = (PROV_RSA_CTX *)vprsactx;
     int ret;
     size_t len = RSA_size(prsactx->rsa);
+
+    ossl_record_fips_unapproved_rsa_key_usage(prsactx->libctx, prsactx->rsa,
+                                              EVP_PKEY_OP_DECRYPT);
+    if (prsactx->pad_mode == RSA_PKCS1_OAEP_PADDING) {
+        if (prsactx->oaep_md != NULL)
+            ossl_record_fips_unapproved_digest_usage(prsactx->libctx,
+                                                     prsactx->oaep_md, 1);
+        if (prsactx->mgf1_md != NULL)
+            ossl_record_fips_unapproved_digest_usage(prsactx->libctx,
+                                                     prsactx->mgf1_md, 1);
+    }
 
     if (!ossl_prov_is_running())
         return 0;

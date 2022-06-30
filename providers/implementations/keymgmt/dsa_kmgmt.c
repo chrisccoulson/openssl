@@ -384,8 +384,16 @@ static int dsa_validate(const void *keydata, int selection, int checktype)
     if ((selection & DSA_POSSIBLE_SELECTIONS) == 0)
         return 1; /* nothing to validate */
 
-    if ((selection & OSSL_KEYMGMT_SELECT_DOMAIN_PARAMETERS) != 0)
+    if ((selection & OSSL_KEYMGMT_SELECT_DOMAIN_PARAMETERS) != 0) {
+        OSSL_LIB_CTX *ctx = ossl_dsa_get0_libctx((DSA *)dsa);
+        FFC_PARAMS *ffc = ossl_dsa_get0_params((DSA *)dsa);
+        if (ffc->mdname != NULL) {
+            EVP_MD *md = EVP_MD_fetch(ctx, ffc->mdname, ffc->mdprops);
+            ossl_record_fips_unapproved_digest_usage(ctx, md, 1);
+            EVP_MD_free(md);
+        }
         ok = ok && dsa_validate_domparams(dsa, checktype);
+    }
 
     if ((selection & OSSL_KEYMGMT_SELECT_PUBLIC_KEY) != 0)
         ok = ok && dsa_validate_public(dsa);
@@ -598,6 +606,9 @@ static void *dsa_gen(void *genctx, OSSL_CALLBACK *osslcb, void *cbarg)
         ossl_ffc_params_set_h(ffc, gctx->hindex);
     }
     if (gctx->mdname != NULL) {
+        EVP_MD *md = EVP_MD_fetch(gctx->libctx, gctx->mdname, gctx->mdprops);
+        ossl_record_fips_unapproved_digest_usage(gctx->libctx, md, 1);
+        EVP_MD_free(md);
         if (!ossl_ffc_set_digest(ffc, gctx->mdname, gctx->mdprops))
             goto end;
     }

@@ -198,7 +198,7 @@ static void *rsa_newctx(void *provctx, const char *propq)
 static int rsa_pss_compute_saltlen(PROV_RSA_CTX *ctx)
 {
     int saltlen = ctx->saltlen;
- 
+
     if (saltlen == RSA_PSS_SALTLEN_DIGEST) {
         saltlen = EVP_MD_get_size(ctx->md);
     } else if (saltlen == RSA_PSS_SALTLEN_AUTO || saltlen == RSA_PSS_SALTLEN_MAX) {
@@ -519,6 +519,9 @@ static int rsa_sign(void *vprsactx, unsigned char *sig, size_t *siglen,
     size_t rsasize = RSA_size(prsactx->rsa);
     size_t mdsize = rsa_get_md_size(prsactx);
 
+    ossl_record_fips_unapproved_rsa_key_usage(prsactx->libctx, prsactx->rsa,
+                                              EVP_PKEY_OP_SIGN);
+
     if (!ossl_prov_is_running())
         return 0;
 
@@ -621,6 +624,10 @@ static int rsa_sign(void *vprsactx, unsigned char *sig, size_t *siglen,
                     break;
                 }
             }
+            ossl_record_fips_unapproved_digest_usage(prsactx->libctx,
+                                                     prsactx->md, 0);
+            ossl_record_fips_unapproved_digest_usage(prsactx->libctx,
+                                                     prsactx->mgf1_md, 0);
             if (!setup_tbuf(prsactx))
                 return 0;
             if (!RSA_padding_add_PKCS1_PSS_mgf1(prsactx->rsa,
@@ -675,6 +682,9 @@ static int rsa_verify_recover(void *vprsactx,
 {
     PROV_RSA_CTX *prsactx = (PROV_RSA_CTX *)vprsactx;
     int ret;
+
+    ossl_record_fips_unapproved_rsa_key_usage(prsactx->libctx, prsactx->rsa,
+                                              EVP_PKEY_OP_VERIFYRECOVER);
 
     if (!ossl_prov_is_running())
         return 0;
@@ -764,6 +774,9 @@ static int rsa_verify(void *vprsactx, const unsigned char *sig, size_t siglen,
     PROV_RSA_CTX *prsactx = (PROV_RSA_CTX *)vprsactx;
     size_t rslen;
 
+    ossl_record_fips_unapproved_rsa_key_usage(prsactx->libctx, prsactx->rsa,
+                                              EVP_PKEY_OP_VERIFY);
+
     if (!ossl_prov_is_running())
         return 0;
     if (prsactx->md != NULL) {
@@ -798,6 +811,11 @@ static int rsa_verify(void *vprsactx, const unsigned char *sig, size_t siglen,
                                    mdsize, tbslen);
                     return 0;
                 }
+
+                ossl_record_fips_unapproved_digest_usage(prsactx->libctx,
+                                                         prsactx->md, 1);
+                ossl_record_fips_unapproved_digest_usage(prsactx->libctx,
+                                                         prsactx->mgf1_md, 1);
 
                 if (!setup_tbuf(prsactx))
                     return 0;
@@ -904,8 +922,16 @@ static int rsa_digest_sign_final(void *vprsactx, unsigned char *sig,
     unsigned char digest[EVP_MAX_MD_SIZE];
     unsigned int dlen = 0;
 
-    if (!ossl_prov_is_running() || prsactx == NULL)
+    if (prsactx == NULL)
         return 0;
+
+    ossl_record_fips_unapproved_digest_usage(prsactx->libctx,
+                                             EVP_MD_CTX_get0_md(prsactx->mdctx),
+                                             0);
+
+    if (!ossl_prov_is_running())
+        return 0;
+
     prsactx->flag_allow_md = 1;
     if (prsactx->mdctx == NULL)
         return 0;
@@ -941,11 +967,16 @@ int rsa_digest_verify_final(void *vprsactx, const unsigned char *sig,
     unsigned char digest[EVP_MAX_MD_SIZE];
     unsigned int dlen = 0;
 
+    if (prsactx == NULL)
+        return 0;
+
+    ossl_record_fips_unapproved_digest_usage(prsactx->libctx,
+                                             EVP_MD_CTX_get0_md(prsactx->mdctx),
+                                             1);
+
     if (!ossl_prov_is_running())
         return 0;
 
-    if (prsactx == NULL)
-        return 0;
     prsactx->flag_allow_md = 1;
     if (prsactx->mdctx == NULL)
         return 0;
