@@ -49,7 +49,9 @@ int ossl_dsa_key_fromdata(DSA *dsa, const OSSL_PARAM params[],
 
     if (param_pub_key != NULL && !OSSL_PARAM_get_BN(param_pub_key, &pub_key))
         goto err;
-    if (param_priv_key != NULL && !OSSL_PARAM_get_BN(param_priv_key, &priv_key))
+    if (param_priv_key != NULL
+        && ((priv_key = BN_secure_new()) == NULL
+           || !OSSL_PARAM_get_BN(param_priv_key, &priv_key)))
         goto err;
 
     if (!DSA_set0_key(dsa, pub_key, priv_key))

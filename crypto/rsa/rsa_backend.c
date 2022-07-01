@@ -78,7 +78,8 @@ int ossl_rsa_fromdata(RSA *rsa, const OSSL_PARAM params[], int include_private)
 
     if ((param_n != NULL && !OSSL_PARAM_get_BN(param_n, &n))
         || (param_e != NULL && !OSSL_PARAM_get_BN(param_e, &e))
-        || (param_d != NULL && !OSSL_PARAM_get_BN(param_d, &d)))
+        || (param_d != NULL && ((d = BN_secure_new()) == NULL ||
+                                !OSSL_PARAM_get_BN(param_d, &d))))
         goto err;
 
     is_private = (d != NULL);
