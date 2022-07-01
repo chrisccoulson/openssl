@@ -76,7 +76,8 @@ int ossl_dh_key_fromdata(DH *dh, const OSSL_PARAM params[], int include_private)
 
     if (include_private
         && param_priv_key != NULL
-        && !OSSL_PARAM_get_BN(param_priv_key, &priv_key))
+        && ((priv_key = BN_secure_new()) == NULL ||
+            !OSSL_PARAM_get_BN(param_priv_key, &priv_key)))
         goto err;
 
     if (param_pub_key != NULL
