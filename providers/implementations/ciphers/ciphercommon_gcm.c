@@ -15,6 +15,7 @@
 #include "prov/ciphercommon_gcm.h"
 #include "prov/providercommon.h"
 #include "prov/provider_ctx.h"
+#include "prov/securitycheck.h"
 
 static int gcm_tls_init(PROV_GCM_CTX *dat, unsigned char *aad, size_t aad_len);
 static int gcm_tls_iv_set_fixed(PROV_GCM_CTX *ctx, unsigned char *iv,
@@ -419,6 +420,8 @@ static int gcm_cipher_internal(PROV_GCM_CTX *ctx, unsigned char *out,
         if (!hw->setiv(ctx, ctx->iv, ctx->ivlen))
             goto err;
         ctx->iv_state = IV_STATE_COPIED;
+        if (!ctx->iv_gen && !ctx->iv_gen_rand)
+            ossl_record_fips_unapproved_usage(ctx->libctx);
     }
 
     if (in != NULL) {

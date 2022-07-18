@@ -25,11 +25,11 @@ $SM4_GOAL=../../libdefault.a
 $CHACHA_GOAL=../../libdefault.a
 $CHACHAPOLY_GOAL=../../libdefault.a
 $SIV_GOAL=../../libdefault.a
+$GCM_GOAL=../../libdefault.a ../../libfips.a
 
 # This source is common building blocks for all ciphers in all our providers.
 SOURCE[$COMMON_GOAL]=\
         ciphercommon.c ciphercommon_hw.c ciphercommon_block.c \
-        ciphercommon_gcm.c ciphercommon_gcm_hw.c \
         ciphercommon_ccm.c ciphercommon_ccm_hw.c
 
 IF[{- !$disabled{des} -}]
@@ -140,3 +140,5 @@ IF[{- !$disabled{chacha} -}]
       cipher_chacha20_poly1305.c cipher_chacha20_poly1305_hw.c
  ENDIF
 ENDIF
+
+SOURCE[$GCM_GOAL]=ciphercommon_gcm.c ciphercommon_gcm_hw.c

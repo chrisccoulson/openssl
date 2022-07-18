@@ -589,6 +589,17 @@ static unsigned char kExampleFFDHE2048KeyDER2[] = {
     0x53, 0x5b
 };
 
+static unsigned char kExampleAES256Key[] = {
+    0x03, 0xba, 0x20, 0x4e, 0x50, 0xd1, 0x26, 0xe4, 0x67, 0x4c, 0x00, 0x5e,
+    0x04, 0xd8, 0x2e, 0x84, 0xc2, 0x13, 0x66, 0x78, 0x0a, 0xf1, 0xf4, 0x3b,
+    0xd5, 0x4a, 0x37, 0x81, 0x6b, 0x6a, 0xb3, 0x40
+};
+
+static unsigned char kExampleIV[] = {
+    0x09, 0x50, 0xde, 0x4f, 0x7b, 0x17, 0xcf, 0x15, 0x34, 0x74, 0xc2, 0xc0,
+    0xb8, 0xc2, 0x4a, 0x5c
+};
+
 static int test_unapproved(int expected)
 {
     int unapproved = -1;
@@ -1222,6 +1233,57 @@ static int test_raw_sign_and_verify(int n)
     return ok;
 }
 
+typedef struct GCM_DATA_st {
+    const unsigned char *iv;
+    int unapproved;
+} GCM_DATA;
+
+static const GCM_DATA gcm_data[] = {
+    { kExampleIV, 1},
+    { NULL, 0}
+};
+
+static int test_gcm(int n)
+{
+    const GCM_DATA *data = &gcm_data[n];
+    const unsigned char *iv = data->iv;
+    int unapproved = data->unapproved;
+    EVP_CIPHER *cipher = NULL;
+    EVP_CIPHER_CTX *ctx = NULL;
+    unsigned char buf[] = "Hello World!";
+    int buf_len = sizeof(buf);
+    const char *errmsg = NULL;
+    int ok = 0;
+
+    if (!TEST_ptr(cipher = EVP_CIPHER_fetch(NULL, SN_aes_256_gcm, NULL)))
+        goto err;
+    if (!TEST_ptr(ctx = EVP_CIPHER_CTX_new()))
+        goto err;
+    if (!TEST_true(EVP_EncryptInit_ex2(ctx, cipher, kExampleAES256Key, iv, NULL)))
+        goto err;
+    if (!TEST_true(EVP_CipherUpdate(ctx, buf, &buf_len, buf, buf_len)))
+        goto err;
+
+    if (unapproved && !test_unapproved(1)) {
+        errmsg = "unexpected unapproved state";
+        goto err;
+    }
+    if (!test_unapproved(0)) {
+        errmsg = "unexpected approved state";
+        goto err;
+    }
+
+    ok = 1;
+
+ err:
+    EVP_CIPHER_CTX_free(ctx);
+    EVP_CIPHER_free(cipher);
+
+    if (errmsg != NULL)
+        TEST_info("%s", errmsg);
+    return ok;
+}
+
 typedef enum OPTION_choice {
     OPT_ERR = -1,
     OPT_EOF = 0,
@@ -1282,6 +1344,7 @@ int setup_tests(void)
     ADD_ALL_TESTS(test_paramgen, OSSL_NELEM(paramgen_data));
     ADD_ALL_TESTS(test_raw_sign_and_verify,
                   OSSL_NELEM(raw_sign_and_verify_data));
+    ADD_ALL_TESTS(test_gcm, OSSL_NELEM(gcm_data));
 
     return 1;
 }
