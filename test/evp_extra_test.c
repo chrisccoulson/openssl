@@ -3541,7 +3541,7 @@ static const EVP_INIT_TEST_st evp_init_tests[] = {
 static int evp_init_seq_set_iv(EVP_CIPHER_CTX *ctx, const EVP_INIT_TEST_st *t)
 {
     int res = 0;
-    
+
     if (t->ivlen != 0) {
         if (!TEST_int_gt(EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, t->ivlen, NULL), 0))
             goto err;
@@ -3725,7 +3725,7 @@ static int test_evp_reset(int idx)
         TEST_info("test_evp_reset %d: %s", idx, errmsg);
     EVP_CIPHER_CTX_free(ctx);
     EVP_CIPHER_free(type);
-    return testresult;    
+    return testresult;
 }
 
 typedef struct {
@@ -3957,6 +3957,128 @@ static int test_gcm_reinit(int idx)
  err:
     if (errmsg != NULL)
         TEST_info("evp_init_test %d: %s", idx, errmsg);
+    EVP_CIPHER_CTX_free(ctx);
+    EVP_CIPHER_free(type);
+    return testresult;
+}
+
+static int test_gcm_reinit_random_iv(void)
+{
+    EVP_CIPHER_CTX *ctx = NULL;
+    EVP_CIPHER *type = NULL;
+    unsigned char outbuf1[1024], outbuf2[1024];
+    unsigned char tag1[16], tag2[16];
+    unsigned char iv[12];
+    int outlen1_1, outlen1_2, outlen1_3;
+    int outlen2_1, outlen2_2, outlen2_3;
+    const char *errmsg = NULL;
+    int testresult = 0;
+
+    if (!TEST_ptr(ctx = EVP_CIPHER_CTX_new())) {
+        errmsg = "CTX_ALLOC";
+        goto err;
+    }
+    if (!TEST_ptr(type = EVP_CIPHER_fetch(testctx, "aes-256-gcm", testpropq))) {
+        errmsg = "CIPHER_FETCH";
+        goto err;
+    }
+    if (!TEST_true(EVP_CipherInit_ex(ctx, type, NULL, kGCMResetKey, NULL, 1))) {
+        errmsg = "ENC_INIT1";
+        goto err;
+    }
+    if (!TEST_int_gt(EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN,
+                                         sizeof(iv), NULL), 0)) {
+        errmsg = "SET_IVLEN";
+        goto err;
+    }
+    if (!TEST_true(EVP_CipherUpdate(ctx, NULL, &outlen1_3, gcmAAD,
+                                    sizeof(gcmAAD)))) {
+        errmsg = "AAD1";
+        goto err;
+    }
+    EVP_CIPHER_CTX_set_padding(ctx, 0);
+    if (!TEST_true(EVP_CipherUpdate(ctx, outbuf1, &outlen1_1, gcmResetPlaintext,
+                                    sizeof(gcmResetPlaintext)))) {
+        errmsg = "CIPHER_UPDATE1";
+        goto err;
+    }
+    if (!TEST_true(EVP_CipherFinal_ex(ctx, outbuf1 + outlen1_1, &outlen1_2))) {
+        errmsg = "CIPHER_FINAL1";
+        goto err;
+    }
+    if (!TEST_int_gt(EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG,
+                                         sizeof(tag1), tag1), 0)) {
+        errmsg = "GET_TAG1";
+        goto err;
+    }
+
+    /* Now reinit */
+    if (!TEST_true(EVP_CipherInit_ex(ctx, NULL, NULL, NULL, NULL, -1))) {
+        errmsg = "ENC_INIT2";
+        goto err;
+    }
+    if (!TEST_true(EVP_CipherUpdate(ctx, NULL, &outlen1_3, gcmAAD,
+                                    sizeof(gcmAAD)))) {
+        errmsg = "AAD2";
+        goto err;
+    }
+    if (!TEST_true(EVP_CipherUpdate(ctx, outbuf1, &outlen1_1, gcmResetPlaintext,
+                                    sizeof(gcmResetPlaintext)))) {
+        errmsg = "CIPHER_UPDATE2";
+        goto err;
+    }
+    if (!TEST_true(EVP_CipherFinal_ex(ctx, outbuf1 + outlen1_1, &outlen1_2))) {
+        errmsg = "CIPHER_FINAL2";
+        goto err;
+    }
+    if (!TEST_int_gt(EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG,
+                                         sizeof(tag1), tag1), 0)) {
+        errmsg = "GET_TAG2";
+        goto err;
+    }
+
+    /* Now encrypt with supplied IV */
+    if (!TEST_true(EVP_CIPHER_CTX_get_updated_iv(ctx, iv, sizeof(iv)))) {
+        errmsg = "CIPHER_CTX_GET_UPDATED_IV";
+        goto err;
+    }
+    if (!TEST_true(EVP_CipherInit_ex(ctx, NULL, NULL, NULL, iv, -1))) {
+        errmsg = "SET_IV";
+        goto err;
+    }
+    if (!TEST_true(EVP_CipherUpdate(ctx, NULL, &outlen2_3, gcmAAD,
+                                    sizeof(gcmAAD)))) {
+        errmsg = "AAD3";
+        goto err;
+    }
+    if (!TEST_true(EVP_CipherUpdate(ctx, outbuf2, &outlen2_1, gcmResetPlaintext,
+                                    sizeof(gcmResetPlaintext)))) {
+        errmsg = "CIPHER_UPDATE3";
+        goto err;
+    }
+    if (!TEST_true(EVP_CipherFinal_ex(ctx, outbuf2 + outlen2_1, &outlen2_2))) {
+        errmsg = "CIPHER_FINAL3";
+        goto err;
+    }
+    if (!TEST_int_gt(EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG,
+                                         sizeof(tag2), tag2), 0)) {
+        errmsg = "GET_TAG3";
+        goto err;
+    }
+    if (!TEST_mem_eq(outbuf1, outlen1_1 + outlen1_2, outbuf2, outlen2_1 +
+                     outlen2_2)) {
+        errmsg = "WRONG_RESULT";
+        goto err;
+    }
+    if (!TEST_mem_eq(tag1, sizeof(tag1), tag2, sizeof(tag2))) {
+        errmsg = "TAG_ERROR";
+        goto err;
+    }
+
+    testresult = 1;
+ err:
+    if (errmsg != NULL)
+        TEST_info("evp_gcm_reinit_random_iv: %s", errmsg);
     EVP_CIPHER_CTX_free(ctx);
     EVP_CIPHER_free(type);
     return testresult;
@@ -4609,6 +4731,7 @@ int setup_tests(void)
     ADD_ALL_TESTS(test_evp_init_seq, OSSL_NELEM(evp_init_tests));
     ADD_ALL_TESTS(test_evp_reset, OSSL_NELEM(evp_reset_tests));
     ADD_ALL_TESTS(test_gcm_reinit, OSSL_NELEM(gcm_reinit_tests));
+    ADD_TEST(test_gcm_reinit_random_iv);
     ADD_ALL_TESTS(test_evp_updated_iv, OSSL_NELEM(evp_updated_iv_tests));
 
 #ifndef OPENSSL_NO_DEPRECATED_3_0

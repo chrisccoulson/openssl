@@ -56,6 +56,9 @@ static int gcm_init(void *vctx, const unsigned char *key, size_t keylen,
 
     ctx->enc = enc;
 
+    if (ctx->iv_gen_rand && ctx->iv_state == IV_STATE_FINISHED)
+        ctx->iv_state = IV_STATE_UNINITIALISED;
+
     if (iv != NULL) {
         if (ivlen == 0 || ivlen > sizeof(ctx->iv)) {
             ERR_raise(ERR_LIB_PROV, PROV_R_INVALID_IV_LENGTH);
@@ -64,6 +67,8 @@ static int gcm_init(void *vctx, const unsigned char *key, size_t keylen,
         ctx->ivlen = ivlen;
         memcpy(ctx->iv, iv, ivlen);
         ctx->iv_state = IV_STATE_BUFFERED;
+        ctx->iv_gen = 0;
+        ctx->iv_gen_rand = 0;
     }
 
     if (key != NULL) {
@@ -481,6 +486,7 @@ static int gcm_tls_iv_set_fixed(PROV_GCM_CTX *ctx, unsigned char *iv,
     if (len == (size_t)-1) {
         memcpy(ctx->iv, iv, ctx->ivlen);
         ctx->iv_gen = 1;
+        ctx->iv_gen_rand = 0;
         ctx->iv_state = IV_STATE_BUFFERED;
         return 1;
     }
@@ -494,6 +500,7 @@ static int gcm_tls_iv_set_fixed(PROV_GCM_CTX *ctx, unsigned char *iv,
         && RAND_bytes_ex(ctx->libctx, ctx->iv + len, ctx->ivlen - len, 0) <= 0)
             return 0;
     ctx->iv_gen = 1;
+    ctx->iv_gen_rand = 0;
     ctx->iv_state = IV_STATE_BUFFERED;
     return 1;
 }
