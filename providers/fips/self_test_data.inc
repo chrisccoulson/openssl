@@ -235,7 +235,7 @@ static const unsigned char aes_128_ecb_ct[] = {
 };
 
 static const ST_KAT_CIPHER st_kat_cipher_tests[] = {
-#ifndef OPENSSL_NO_DES
+#if 0
     {
         {
             OSSL_SELF_TEST_DESC_CIPHER_TDES,
