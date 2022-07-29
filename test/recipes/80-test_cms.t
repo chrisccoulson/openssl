@@ -57,6 +57,7 @@ ok(run(test(["pkcs7_test"])), "test pkcs7");
 unless ($no_fips) {
     @config = ( "-config", srctop_file("test", "fips-and-base.cnf") );
     $provname = 'fips';
+    $no_des = 1;
 }
 
 $ENV{OPENSSL_TEST_LIBCTX} = "1";
@@ -424,7 +425,7 @@ my @smime_cms_cades_tests = (
 
     [ "signed content DER format, RSA key, SHA256 md, CAdES-BES compatible",
       [ "{cmd1}", @prov, "-sign", "-cades", "-binary",  "-nodetach", "-nosmimecap", "-md", "sha256",
-        "-in", $smcont, "-outform", "DER", 
+        "-in", $smcont, "-outform", "DER",
         "-certfile", $smroot, "-signer", $smrsa1,
         "-outform", "DER", "-out", "{output}.cms"  ],
       [ "{cmd2}", @prov, "-verify", "-cades", "-in", "{output}.cms", "-inform", "DER",
@@ -434,7 +435,7 @@ my @smime_cms_cades_tests = (
 
     [ "resigned content DER format, RSA key, SHA256 md, CAdES-BES compatible",
       [ "{cmd1}", @prov, "-sign", "-cades", "-binary",  "-nodetach", "-nosmimecap", "-md", "sha256",
-        "-in", $smcont, "-outform", "DER", 
+        "-in", $smcont, "-outform", "DER",
         "-certfile", $smroot, "-signer", $smrsa1,
         "-outform", "DER", "-out", "{output}.cms"  ],
       [ "{cmd1}", @prov, "-resign", "-cades", "-binary", "-nodetach", "-nosmimecap", "-md", "sha256",
