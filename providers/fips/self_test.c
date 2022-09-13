@@ -328,22 +328,6 @@ int SELF_TEST_post(SELF_TEST_POST_PARAMS *st, int on_demand_test)
 
     bio_module = (*st->bio_new_file_cb)(st->module_filename, "rb");
 
-    if (!dladdr1(module_checksum, &dl_info, (void **)&lm, RTLD_DL_LINKMAP))
-        goto end;
-
-    /* Always check the integrity of the fips module */
-    if (bio_module == NULL
-            || !verify_integrity(bio_module, st->bio_read_ex_cb,
-                                 (unsigned char *)module_checksum,
-                                 sizeof(module_checksum),
-                                 (unsigned long)module_checksum - lm->l_addr,
-                                 sizeof(module_checksum),
-                                 st->libctx, ev,
-                                 OSSL_SELF_TEST_TYPE_MODULE_INTEGRITY)) {
-        ERR_raise(ERR_LIB_PROV, PROV_R_MODULE_INTEGRITY_FAILURE);
-        goto end;
-    }
-
     /* This will be NULL during installation - so the self test KATS will run */
     if (st->indicator_data != NULL) {
         /*
@@ -386,6 +370,22 @@ int SELF_TEST_post(SELF_TEST_POST_PARAMS *st, int on_demand_test)
             ERR_raise(ERR_LIB_PROV, PROV_R_SELF_TEST_KAT_FAILURE);
             goto end;
         }
+    }
+
+    if (!dladdr1(module_checksum, &dl_info, (void **)&lm, RTLD_DL_LINKMAP))
+        goto end;
+
+    /* Always check the integrity of the fips module */
+    if (bio_module == NULL
+            || !verify_integrity(bio_module, st->bio_read_ex_cb,
+                                 (unsigned char *)module_checksum,
+                                 sizeof(module_checksum),
+                                 (unsigned long)module_checksum - lm->l_addr,
+                                 sizeof(module_checksum),
+                                 st->libctx, ev,
+                                 OSSL_SELF_TEST_TYPE_MODULE_INTEGRITY)) {
+        ERR_raise(ERR_LIB_PROV, PROV_R_MODULE_INTEGRITY_FAILURE);
+        goto end;
     }
 
     if (!set_self_test_running_on_this_thread(0))
