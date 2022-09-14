@@ -468,12 +468,13 @@ EVP_PKEY_CTX *EVP_PKEY_CTX_new_id(int id, ENGINE *e)
 {
     return int_ctx_new(NULL, NULL, e, NULL, NULL, id);
 }
+#endif /* FIPS_MODULE */
 
 EVP_PKEY_CTX *EVP_PKEY_CTX_dup(const EVP_PKEY_CTX *pctx)
 {
     EVP_PKEY_CTX *rctx;
 
-# ifndef OPENSSL_NO_ENGINE
+# if !defined(OPENSSL_NO_ENGINE) && !defined(FIPS_MODULE)
     /* Make sure it's safe to copy a pkey context using an ENGINE */
     if (pctx->engine && !ENGINE_init(pctx->engine)) {
         ERR_raise(ERR_LIB_EVP, ERR_R_ENGINE_LIB);
@@ -578,7 +579,7 @@ EVP_PKEY_CTX *EVP_PKEY_CTX_dup(const EVP_PKEY_CTX *pctx)
     }
 
     rctx->pmeth = pctx->pmeth;
-# ifndef OPENSSL_NO_ENGINE
+# if !defined(OPENSSL_NO_ENGINE) && !defined(FIPS_MODULE)
     rctx->engine = pctx->engine;
 # endif
 
@@ -609,6 +610,8 @@ err:
     EVP_PKEY_CTX_free(rctx);
     return NULL;
 }
+
+#ifndef FIPS_MODULE
 
 int EVP_PKEY_meth_add0(const EVP_PKEY_METHOD *pmeth)
 {

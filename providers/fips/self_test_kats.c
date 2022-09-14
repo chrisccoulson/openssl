@@ -442,16 +442,13 @@ static int self_test_sign(const ST_KAT_SIGN *t,
     int ret = 0;
     OSSL_PARAM *params = NULL, *params_sig = NULL;
     OSSL_PARAM_BLD *bld = NULL;
-    EVP_PKEY_CTX *sctx = NULL, *kctx = NULL;
+    EVP_PKEY_CTX *kctx = NULL;
+    EVP_MD_CTX *sctx = NULL;
     EVP_PKEY *pkey = NULL;
     unsigned char sig[256];
     BN_CTX *bnctx = NULL;
     size_t siglen = sizeof(sig);
-    static const unsigned char dgst[] = {
-        0x7f, 0x83, 0xb1, 0x65, 0x7f, 0xf1, 0xfc, 0x53, 0xb9, 0x2d, 0xc1, 0x81,
-        0x48, 0xa1, 0xd6, 0x5d, 0xfc, 0x2d, 0x4b, 0x1f, 0xa3, 0xd6, 0x77, 0x28,
-        0x4a, 0xdd, 0xd2, 0x00, 0x12, 0x6d, 0x90, 0x69
-    };
+    static const char msg[] = "Hello World!";
     const char *typ = OSSL_SELF_TEST_TYPE_KAT_SIGNATURE;
 
     if (t->sig_expected == NULL)
@@ -479,24 +476,17 @@ static int self_test_sign(const ST_KAT_SIGN *t,
         || EVP_PKEY_fromdata(kctx, &pkey, EVP_PKEY_KEYPAIR, params) <= 0)
         goto err;
 
-    /* Create a EVP_PKEY_CTX to use for the signing operation */
-    sctx = EVP_PKEY_CTX_new_from_pkey(libctx, pkey, NULL);
-    if (sctx == NULL
-        || EVP_PKEY_sign_init(sctx) <= 0)
+    /* Create a EVP_MD_CTX to use for the signing operation */
+    sctx = EVP_MD_CTX_new();
+    if (sctx == NULL)
         goto err;
 
-    /* set signature parameters */
-    if (!OSSL_PARAM_BLD_push_utf8_string(bld, OSSL_SIGNATURE_PARAM_DIGEST,
-                                         t->mdalgorithm,
-                                         strlen(t->mdalgorithm) + 1))
-        goto err;
-    params_sig = OSSL_PARAM_BLD_to_param(bld);
-    if (EVP_PKEY_CTX_set_params(sctx, params_sig) <= 0)
-        goto err;
-
-    if (EVP_PKEY_sign(sctx, sig, &siglen, dgst, sizeof(dgst)) <= 0
-        || EVP_PKEY_verify_init(sctx) <= 0
-        || EVP_PKEY_CTX_set_params(sctx, params_sig) <= 0)
+    if (EVP_DigestSignInit_ex(sctx, NULL, t->mdalgorithm, libctx, NULL, pkey,
+                              NULL) <= 0
+        || EVP_DigestSignUpdate(sctx, msg, strlen(msg)) <= 0
+        || EVP_DigestSignFinal(sctx, sig, &siglen) <= 0
+        || EVP_DigestVerifyInit_ex(sctx, NULL, t->mdalgorithm, libctx, NULL, pkey,
+                                   NULL) <= 0)
         goto err;
 
     /*
@@ -509,14 +499,15 @@ static int self_test_sign(const ST_KAT_SIGN *t,
         goto err;
 
     OSSL_SELF_TEST_oncorrupt_byte(st, sig);
-    if (EVP_PKEY_verify(sctx, sig, siglen, dgst, sizeof(dgst)) <= 0)
+    if (EVP_DigestVerifyUpdate(sctx, msg, strlen(msg)) <= 0
+        || EVP_DigestVerifyFinal(sctx, sig, siglen) <= 0)
         goto err;
     ret = 1;
 err:
     BN_CTX_free(bnctx);
     EVP_PKEY_free(pkey);
     EVP_PKEY_CTX_free(kctx);
-    EVP_PKEY_CTX_free(sctx);
+    EVP_MD_CTX_free(sctx);
     OSSL_PARAM_free(params);
     OSSL_PARAM_free(params_sig);
     OSSL_PARAM_BLD_free(bld);
