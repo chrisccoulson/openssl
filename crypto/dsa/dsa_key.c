@@ -18,6 +18,7 @@
 #include "internal/cryptlib.h"
 #include <openssl/bn.h>
 #include <openssl/self_test.h>
+#include <openssl/sha.h>
 #include "prov/providercommon.h"
 #include "crypto/dsa.h"
 #include "dsa_local.h"
@@ -143,8 +144,11 @@ static int dsa_keygen(DSA *dsa, int pairwise_test)
 static int dsa_keygen_pairwise_test(DSA *dsa, OSSL_CALLBACK *cb, void *cbarg)
 {
     int ret = 0;
-    unsigned char dgst[16] = {0};
-    unsigned int dgst_len = (unsigned int)sizeof(dgst);
+    unsigned char msg[16] = {0};
+    size_t msg_len = sizeof(msg);
+    SHA256_CTX dgst_ctx;
+    unsigned char dgst[SHA256_DIGEST_LENGTH];
+    int dgst_len = (int)sizeof(dgst);
     DSA_SIG *sig = NULL;
     OSSL_SELF_TEST *st = NULL;
 
@@ -154,6 +158,11 @@ static int dsa_keygen_pairwise_test(DSA *dsa, OSSL_CALLBACK *cb, void *cbarg)
 
     OSSL_SELF_TEST_onbegin(st, OSSL_SELF_TEST_TYPE_PCT,
                            OSSL_SELF_TEST_DESC_PCT_DSA);
+
+    if (SHA256_Init(&dgst_ctx) <= 0
+        || SHA256_Update(&dgst_ctx, msg, msg_len) <= 0
+        || SHA256_Final(dgst, &dgst_ctx) <= 0)
+        goto err;
 
     sig = DSA_do_sign(dgst, (int)dgst_len, dsa);
     if (sig == NULL)
