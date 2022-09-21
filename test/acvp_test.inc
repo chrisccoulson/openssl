@@ -1213,6 +1213,7 @@ static const struct rsa_siggen_st rsa_siggen_data[] = {
         ITM(rsa_siggen0_msg),
         NO_PSS_SALT_LEN,
     },
+#if 0
     {
         "x931",
         2048,
@@ -1220,6 +1221,7 @@ static const struct rsa_siggen_st rsa_siggen_data[] = {
         ITM(rsa_siggen0_msg),
         NO_PSS_SALT_LEN,
     },
+#endif
     {
         "pss",
         2048,
@@ -1631,6 +1633,7 @@ static const unsigned char rsa_sigverpss_1_sig[] = {
     0x5c, 0xea, 0x8a, 0x92, 0x31, 0xd2, 0x11, 0x4b,
 };
 
+#if 0
 static const unsigned char rsa_sigverx931_0_n[] = {
     0xa0, 0x16, 0x14, 0x80, 0x8b, 0x17, 0x2b, 0xad,
     0xd7, 0x07, 0x31, 0x6d, 0xfc, 0xba, 0x25, 0x83,
@@ -1826,6 +1829,7 @@ static const unsigned char rsa_sigverx931_1_sig[] = {
     0xea, 0x6e, 0xbd, 0x1c, 0x39, 0x3a, 0xfd, 0xa4,
     0xde, 0x54, 0xae, 0xde, 0x5e, 0xf7, 0xb0, 0x6d,
 };
+#endif
 
 static const struct rsa_sigver_st rsa_sigver_data[] = {
     {
@@ -1850,6 +1854,7 @@ static const struct rsa_sigver_st rsa_sigver_data[] = {
         NO_PSS_SALT_LEN,
         FAIL
     },
+#if 0
     {
         "x931",
         3072,
@@ -1872,6 +1877,7 @@ static const struct rsa_sigver_st rsa_sigver_data[] = {
         NO_PSS_SALT_LEN,
         FAIL
     },
+#endif
     {
         "pss",
         4096,

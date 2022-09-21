@@ -134,6 +134,49 @@ int ossl_record_fips_unapproved_digest_usage(OSSL_LIB_CTX *ctx,
     return 1;
 }
 
+int ossl_record_fips_unapproved_rsa_padding_usage(OSSL_LIB_CTX *ctx,
+                                                  int padding, int operation)
+{
+    int signing = 0;
+
+    switch (operation) {
+    case EVP_PKEY_OP_SIGN:
+    case EVP_PKEY_OP_VERIFY:
+    case EVP_PKEY_OP_VERIFYRECOVER:
+        signing = 1;
+        break;
+    case EVP_PKEY_OP_ENCRYPT:
+    case EVP_PKEY_OP_DECRYPT:
+        /* signing = 0 */
+        break;
+    default:
+        ossl_set_error_state(OSSL_SELF_TEST_TYPE_NONE);
+        return 0;
+    }
+
+    switch (padding) {
+    case RSA_PKCS1_PADDING:
+        /* Approved for signatures */
+        if (!signing)
+            return ossl_record_fips_unapproved_usage(ctx);
+        break;
+    case RSA_PKCS1_PSS_PADDING:
+        /* Approved */
+        break;
+    case RSA_NO_PADDING:
+    case RSA_PKCS1_OAEP_PADDING:
+    case RSA_X931_PADDING:
+    case RSA_PKCS1_WITH_TLS_PADDING:
+        /* Not approved */
+        return ossl_record_fips_unapproved_usage(ctx);
+    default:
+        ossl_set_error_state(OSSL_SELF_TEST_TYPE_NONE);
+        return 0;
+    }
+
+    return 1;
+}
+
 int ossl_digest_rsa_sign_get_md_nid(OSSL_LIB_CTX *ctx, const EVP_MD *md,
                                     int sha1_allowed)
 {

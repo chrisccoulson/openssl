@@ -148,6 +148,9 @@ static int rsa_encrypt(void *vprsactx, unsigned char *out, size_t *outlen,
             ossl_record_fips_unapproved_digest_usage(prsactx->libctx,
                                                      prsactx->mgf1_md, 1);
     }
+    ossl_record_fips_unapproved_rsa_padding_usage(prsactx->libctx,
+                                                  prsactx->pad_mode,
+                                                  EVP_PKEY_OP_ENCRYPT);
 
     if (!ossl_prov_is_running())
         return 0;
@@ -192,6 +195,11 @@ static int rsa_encrypt(void *vprsactx, unsigned char *out, size_t *outlen,
         ret = RSA_public_encrypt(rsasize, tbuf, out, prsactx->rsa,
                                  RSA_NO_PADDING);
         OPENSSL_free(tbuf);
+#ifdef FIPS_MODULE
+    } else if (prsactx->pad_mode == RSA_NO_PADDING) {
+        ERR_raise(ERR_LIB_PROV, PROV_R_INVALID_PADDING_MODE);
+        return 0;
+#endif
     } else {
         ret = RSA_public_encrypt(inlen, in, out, prsactx->rsa,
                                  prsactx->pad_mode);
@@ -220,6 +228,9 @@ static int rsa_decrypt(void *vprsactx, unsigned char *out, size_t *outlen,
             ossl_record_fips_unapproved_digest_usage(prsactx->libctx,
                                                      prsactx->mgf1_md, 1);
     }
+    ossl_record_fips_unapproved_rsa_padding_usage(prsactx->libctx,
+                                                  prsactx->pad_mode,
+                                                  EVP_PKEY_OP_DECRYPT);
 
     if (!ossl_prov_is_running())
         return 0;
@@ -515,6 +526,11 @@ static int rsa_set_ctx_params(void *vprsactx, const OSSL_PARAM params[])
          */
         if (pad_mode == RSA_PKCS1_PSS_PADDING)
             return 0;
+#ifdef FIPS_MODULE
+        if (pad_mode == RSA_NO_PADDING
+            && prsactx->operation == EVP_PKEY_OP_ENCRYPT)
+            return 0;
+#endif
         if (pad_mode == RSA_PKCS1_OAEP_PADDING && prsactx->oaep_md == NULL) {
             prsactx->oaep_md = EVP_MD_fetch(prsactx->libctx, "SHA1", mdprops);
             if (prsactx->oaep_md == NULL)

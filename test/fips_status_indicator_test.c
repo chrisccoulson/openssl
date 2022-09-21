@@ -632,21 +632,47 @@ typedef struct SIGN_AND_VERIFY_DATA_st {
     const char *md;
     const unsigned char *key;
     size_t keylen;
+    OSSL_PARAM params[2];
     int unapproved;
 } SIGN_AND_VERIFY_DATA;
 
 static const SIGN_AND_VERIFY_DATA sign_and_verify_data[] = {
-    {"SHA-256", kExampleRSA1024KeyDER, sizeof(kExampleRSA1024KeyDER), 1},
-    {"SHA-256", kExampleRSA768KeyDER, sizeof(kExampleRSA768KeyDER), 2},
-    {"SHA-256", kExampleRSA2048KeyDER, sizeof(kExampleRSA2048KeyDER), 0},
-    {"SHA-1", kExampleRSA2048KeyDER, sizeof(kExampleRSA2048KeyDER), 1},
-    {"SHA-256", kExampleDSA1024KeyDER, sizeof(kExampleDSA1024KeyDER), 1},
-    {"SHA-256", kExampleDSA1024_224KeyDER, sizeof(kExampleDSA1024_224KeyDER), 2},
-    {"SHA-256", kExampleDSA2048KeyDER, sizeof(kExampleDSA2048KeyDER), 0},
-    {"SHA-1", kExampleDSA2048KeyDER, sizeof(kExampleDSA2048KeyDER), 1},
-    {"SHA-256", kExampleP192ECKeyDER, sizeof(kExampleP192ECKeyDER), 1},
-    {"SHA-256", kExampleP256ECKeyDER, sizeof(kExampleP256ECKeyDER), 0},
-    {"SHA-1", kExampleP256ECKeyDER, sizeof(kExampleP256ECKeyDER), 1},
+    {"SHA-256", kExampleRSA1024KeyDER, sizeof(kExampleRSA1024KeyDER),
+        { OSSL_PARAM_END }, 1},
+    {"SHA-256", kExampleRSA768KeyDER, sizeof(kExampleRSA768KeyDER),
+        { OSSL_PARAM_END }, 2},
+    {"SHA-256", kExampleRSA2048KeyDER, sizeof(kExampleRSA2048KeyDER),
+        { OSSL_PARAM_END }, 0},
+    {"SHA-1", kExampleRSA2048KeyDER, sizeof(kExampleRSA2048KeyDER),
+        { OSSL_PARAM_END }, 1},
+    {"SHA-256", kExampleDSA1024KeyDER, sizeof(kExampleDSA1024KeyDER),
+        { OSSL_PARAM_END }, 1},
+    {"SHA-256", kExampleDSA1024_224KeyDER, sizeof(kExampleDSA1024_224KeyDER),
+        { OSSL_PARAM_END }, 2},
+    {"SHA-256", kExampleDSA2048KeyDER, sizeof(kExampleDSA2048KeyDER),
+        { OSSL_PARAM_END }, 0},
+    {"SHA-1", kExampleDSA2048KeyDER, sizeof(kExampleDSA2048KeyDER),
+        { OSSL_PARAM_END }, 1},
+    {"SHA-256", kExampleP192ECKeyDER, sizeof(kExampleP192ECKeyDER),
+        { OSSL_PARAM_END }, 1},
+    {"SHA-256", kExampleP256ECKeyDER, sizeof(kExampleP256ECKeyDER),
+        { OSSL_PARAM_END }, 0},
+    {"SHA-1", kExampleP256ECKeyDER, sizeof(kExampleP256ECKeyDER),
+        { OSSL_PARAM_END }, 1},
+    {"SHA-256", kExampleRSA2048KeyDER, sizeof(kExampleRSA2048KeyDER),
+        {
+            OSSL_PARAM_utf8_string(OSSL_SIGNATURE_PARAM_PAD_MODE,
+                                   OSSL_PKEY_RSA_PAD_MODE_PSS,
+                                   sizeof(OSSL_PKEY_RSA_PAD_MODE_PSS) - 1),
+            OSSL_PARAM_END
+        }, 0},
+    {"SHA-256", kExampleRSA2048KeyDER, sizeof(kExampleRSA2048KeyDER),
+        {
+            OSSL_PARAM_utf8_string(OSSL_SIGNATURE_PARAM_PAD_MODE,
+                                   OSSL_PKEY_RSA_PAD_MODE_PKCSV15,
+                                   sizeof(OSSL_PKEY_RSA_PAD_MODE_PKCSV15) - 1),
+            OSSL_PARAM_END
+        }, 0},
 };
 
 static int test_sign_and_verify(int n)
@@ -655,6 +681,7 @@ static int test_sign_and_verify(int n)
     const char *md = data->md;
     const unsigned char *key = data->key;
     size_t keylen = data->keylen;
+    const OSSL_PARAM *params = data->params;
     int unapproved = data->unapproved;
     const char msg[] = "Hello World!";
     size_t msglen = sizeof(msg);
@@ -683,7 +710,7 @@ static int test_sign_and_verify(int n)
     }
 
     if (!TEST_true(EVP_DigestSignInit_ex(mdctx, &pctx, md, NULL, NULL,
-                                         pkey, NULL)))
+                                         pkey, params)))
         goto err;
     if (!TEST_true(EVP_DigestSignUpdate(mdctx, msg, msglen)))
         goto err;
@@ -704,7 +731,7 @@ static int test_sign_and_verify(int n)
     }
 
     if (!TEST_true(EVP_DigestVerifyInit_ex(mdctx, &pctx, md, NULL, NULL,
-                                           pkey, NULL)))
+                                           pkey, params)))
         goto err;
     if (!TEST_true(EVP_DigestVerifyUpdate(mdctx, msg, msglen)))
         goto err;
@@ -735,20 +762,22 @@ static int test_sign_and_verify(int n)
 }
 
 typedef struct RSA_ENCRYPT_AND_DECRYPT_DATA_st {
+    int padding;
     const unsigned char *key;
     size_t keylen;
     int unapproved;
 } RSA_ENCRYPT_AND_DECRYPT_DATA;
 
 static const RSA_ENCRYPT_AND_DECRYPT_DATA rsa_encrypt_and_decrypt_data[] = {
-    {kExampleRSA1024KeyDER, sizeof(kExampleRSA1024KeyDER), 1},
-    {kExampleRSA768KeyDER, sizeof(kExampleRSA768KeyDER), 2},
-    {kExampleRSA2048KeyDER, sizeof(kExampleRSA2048KeyDER), 0},
+    {RSA_PKCS1_OAEP_PADDING, kExampleRSA1024KeyDER,
+        sizeof(kExampleRSA1024KeyDER), 2},
+    {RSA_PKCS1_PADDING, kExampleRSA1024KeyDER, sizeof(kExampleRSA1024KeyDER), 2},
 };
 
 static int test_rsa_encrypt_and_decrypt(int n)
 {
     const RSA_ENCRYPT_AND_DECRYPT_DATA *data = &rsa_encrypt_and_decrypt_data[n];
+    int padding = data->padding;
     const unsigned char *key = data->key;
     size_t keylen = data->keylen;
     int unapproved = data->unapproved;
@@ -775,7 +804,7 @@ static int test_rsa_encrypt_and_decrypt(int n)
         goto err;
     if (!TEST_true(EVP_PKEY_encrypt_init(pctx)))
         goto err;
-    if (!TEST_true(EVP_PKEY_CTX_set_rsa_padding(pctx, RSA_PKCS1_OAEP_PADDING)))
+    if (!TEST_true(EVP_PKEY_CTX_set_rsa_padding(pctx, padding)))
         goto err;
 
     if (!test_unapproved(0)) {
@@ -803,7 +832,7 @@ static int test_rsa_encrypt_and_decrypt(int n)
 
     if (!TEST_true(EVP_PKEY_decrypt_init(pctx)))
         goto err;
-    if (!TEST_true(EVP_PKEY_CTX_set_rsa_padding(pctx, RSA_PKCS1_OAEP_PADDING)))
+    if (!TEST_true(EVP_PKEY_CTX_set_rsa_padding(pctx, padding)))
         goto err;
     if (!TEST_true(EVP_PKEY_decrypt(pctx, NULL, &recovered_len, ciphertext,
                                     ciphertext_len)))

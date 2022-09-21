@@ -521,6 +521,9 @@ static int rsa_sign_int(PROV_RSA_CTX *prsactx, unsigned char *sig,
 
     ossl_record_fips_unapproved_rsa_key_usage(prsactx->libctx, prsactx->rsa,
                                               EVP_PKEY_OP_SIGN);
+    ossl_record_fips_unapproved_rsa_padding_usage(prsactx->libctx,
+                                                  prsactx->pad_mode,
+                                                  EVP_PKEY_OP_SIGN);
 
     if (!ossl_prov_is_running())
         return 0;
@@ -647,6 +650,11 @@ static int rsa_sign_int(PROV_RSA_CTX *prsactx, unsigned char *sig,
                            "Only X.931, PKCS#1 v1.5 or PSS padding allowed");
             return 0;
         }
+#ifdef FIPS_MODULE
+    } else if (prsactx->pad_mode == RSA_NO_PADDING) {
+        ERR_raise(ERR_LIB_PROV, PROV_R_INVALID_PADDING_MODE);
+        return 0;
+#endif
     } else {
         ret = RSA_private_encrypt(tbslen, tbs, sig, prsactx->rsa,
                                   prsactx->pad_mode);
@@ -693,6 +701,9 @@ static int rsa_verify_recover(void *vprsactx,
 
     ossl_record_fips_unapproved_rsa_key_usage(prsactx->libctx, prsactx->rsa,
                                               EVP_PKEY_OP_VERIFYRECOVER);
+    ossl_record_fips_unapproved_rsa_padding_usage(prsactx->libctx,
+                                                  prsactx->pad_mode,
+                                                  EVP_PKEY_OP_VERIFYRECOVER);
 
     if (!ossl_prov_is_running())
         return 0;
@@ -784,6 +795,9 @@ static int rsa_verify_int(PROV_RSA_CTX *prsactx, const unsigned char *sig,
 
     ossl_record_fips_unapproved_rsa_key_usage(prsactx->libctx, prsactx->rsa,
                                               EVP_PKEY_OP_VERIFY);
+    ossl_record_fips_unapproved_rsa_padding_usage(prsactx->libctx,
+                                                  prsactx->pad_mode,
+                                                  EVP_PKEY_OP_VERIFY);
 
     if (!ossl_prov_is_running())
         return 0;
@@ -848,6 +862,11 @@ static int rsa_verify_int(PROV_RSA_CTX *prsactx, const unsigned char *sig,
                            "Only X.931, PKCS#1 v1.5 or PSS padding allowed");
             return 0;
         }
+#ifdef FIPS_MODULE
+    } else if (prsactx->pad_mode == RSA_NO_PADDING) {
+        ERR_raise(ERR_LIB_PROV, PROV_R_INVALID_PADDING_MODE);
+        return 0;
+#endif
     } else {
         if (!setup_tbuf(prsactx))
             return 0;
@@ -1274,8 +1293,13 @@ static int rsa_set_ctx_params(void *vprsactx, const OSSL_PARAM params[])
             err_extra_text = "PKCS#1 padding not allowed with RSA-PSS";
             goto cont;
         case RSA_NO_PADDING:
+#ifndef FIPS_MODULE
             err_extra_text = "No padding not allowed with RSA-PSS";
             goto cont;
+#else
+            err_extra_text = "No padding not allowed in the FIPS provider";
+            goto bad_pad;
+#endif
         case RSA_X931_PADDING:
             err_extra_text = "X.931 padding not allowed with RSA-PSS";
         cont:

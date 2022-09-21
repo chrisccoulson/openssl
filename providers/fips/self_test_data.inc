@@ -1278,6 +1278,7 @@ static const ST_KAT_PARAM rsa_crt_key[] = {
     ST_KAT_PARAM_END()
 };
 
+#if 0 /* There are no approved asym ciphers in this module */
 static const ST_KAT_PARAM rsa_pub_key[] = {
     ST_KAT_PARAM_BIGNUM(OSSL_PKEY_PARAM_RSA_N, rsa_n),
     ST_KAT_PARAM_BIGNUM(OSSL_PKEY_PARAM_RSA_E, rsa_e),
@@ -1302,6 +1303,7 @@ static const ST_KAT_PARAM rsa_enc_params[] = {
     ST_KAT_PARAM_UTF8STRING(OSSL_ASYM_CIPHER_PARAM_PAD_MODE, pad_mode_none),
     ST_KAT_PARAM_END()
 };
+#endif
 
 static const unsigned char rsa_expected_sig[256] = {
     0xad, 0xbe, 0x2a, 0xaf, 0x16, 0x85, 0xc5, 0x00,
@@ -1338,6 +1340,7 @@ static const unsigned char rsa_expected_sig[256] = {
     0x2c, 0x68, 0xf0, 0x37, 0xa9, 0xd2, 0x56, 0xd6
 };
 
+#if 0 /* There are no approved asym ciphers in this module */
 static const unsigned char rsa_asym_plaintext_encrypt[256] = {
    0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
    0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10,
@@ -1376,6 +1379,7 @@ static const unsigned char rsa_asym_expected_encrypt[256] = {
     0x29, 0xf4, 0xf5, 0x66, 0x7d, 0x93, 0x4a, 0xaa,
     0x05, 0x52, 0x55, 0xc1, 0xc6, 0x06, 0x90, 0xab,
 };
+#endif
 
 #ifndef OPENSSL_NO_EC
 /* ECDSA key data */
@@ -1603,6 +1607,7 @@ static const ST_KAT_SIGN st_kat_sign_tests[] = {
 #endif /* OPENSSL_NO_DSA */
 };
 
+#if 0 /* There are no approved asym ciphers in this module */
 static const ST_KAT_ASYM_CIPHER st_kat_asym_cipher_tests[] = {
     {
         OSSL_SELF_TEST_DESC_ASYM_RSA_ENC,
@@ -1632,3 +1637,4 @@ static const ST_KAT_ASYM_CIPHER st_kat_asym_cipher_tests[] = {
         ITM(rsa_asym_plaintext_encrypt),
     },
 };
+#endif
