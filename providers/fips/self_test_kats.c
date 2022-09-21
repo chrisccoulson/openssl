@@ -521,6 +521,7 @@ err:
  * FIPS 140-2 IG D.9 states that separate KAT tests are needed for encrypt
  * and decrypt..
  */
+#if 0 /* There are no approved asym ciphers in this module */
 static int self_test_asym_cipher(const ST_KAT_ASYM_CIPHER *t, OSSL_SELF_TEST *st,
                                  OSSL_LIB_CTX *libctx)
 {
@@ -601,6 +602,7 @@ err:
     OSSL_SELF_TEST_onend(st, ret);
     return ret;
 }
+#endif
 
 /*
  * Test a data driven list of KAT's for digest algorithms.
@@ -629,6 +631,7 @@ static int self_test_ciphers(OSSL_SELF_TEST *st, OSSL_LIB_CTX *libctx)
     return ret;
 }
 
+#if 0 /* There are no approved asym ciphers in this module */
 static int self_test_asym_ciphers(OSSL_SELF_TEST *st, OSSL_LIB_CTX *libctx)
 {
     int i, ret = 1;
@@ -639,6 +642,7 @@ static int self_test_asym_ciphers(OSSL_SELF_TEST *st, OSSL_LIB_CTX *libctx)
     }
     return ret;
 }
+#endif
 
 static int self_test_kdfs(OSSL_SELF_TEST *st, OSSL_LIB_CTX *libctx)
 {
@@ -709,8 +713,10 @@ int SELF_TEST_kats(OSSL_SELF_TEST *st, OSSL_LIB_CTX *libctx)
         ret = 0;
     if (!self_test_kas(st, libctx))
         ret = 0;
+#if 0 /* There are no approved asym ciphers in this module */
     if (!self_test_asym_ciphers(st, libctx))
         ret = 0;
+#endif
 
     return ret;
 }
