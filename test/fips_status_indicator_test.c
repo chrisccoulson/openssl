@@ -11,8 +11,8 @@
 #include <openssl/crypto.h>
 #include <openssl/decoder.h>
 #include <openssl/evp.h>
-#include <openssl/kdf.h>
 #include <openssl/fips_names.h>
+#include <openssl/kdf.h>
 #include <openssl/provider.h>
 #include "internal/nelem.h"
 #include "testutil.h"
@@ -1011,10 +1011,26 @@ static const KDF_DATA kdf_data[] = {
                                    sizeof(SN_id_aes128_wrap) - 1),
             OSSL_PARAM_END
         }, 0},
-    {"SSKDF",
+    {"X963KDF",
         {
             OSSL_PARAM_utf8_string(OSSL_KDF_PARAM_DIGEST, SN_shake128,
                                    sizeof(SN_shake128) - 1),
+            OSSL_PARAM_octet_string(OSSL_KDF_PARAM_KEY, kdf_key,
+                                    sizeof(kdf_key)),
+            OSSL_PARAM_END
+        }, 1},
+    {"X963KDF",
+        {
+            OSSL_PARAM_utf8_string(OSSL_KDF_PARAM_DIGEST, SN_sha256,
+                                   sizeof(SN_sha256) - 1),
+            OSSL_PARAM_octet_string(OSSL_KDF_PARAM_KEY, kdf_key,
+                                    sizeof(kdf_key)),
+            OSSL_PARAM_END
+        }, 0},
+    {"HKDF",
+        {
+            OSSL_PARAM_utf8_string(OSSL_KDF_PARAM_DIGEST, SN_sha256,
+                                   sizeof(SN_sha256) - 1),
             OSSL_PARAM_octet_string(OSSL_KDF_PARAM_KEY, kdf_key,
                                     sizeof(kdf_key)),
             OSSL_PARAM_END
@@ -1026,7 +1042,7 @@ static const KDF_DATA kdf_data[] = {
             OSSL_PARAM_octet_string(OSSL_KDF_PARAM_KEY, kdf_key,
                                     sizeof(kdf_key)),
             OSSL_PARAM_END
-        }, 0},
+        }, 1}
 };
 
 static int test_kdf(int n)
