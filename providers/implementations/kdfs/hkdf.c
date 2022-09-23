@@ -29,6 +29,7 @@
 #include "prov/providercommon.h"
 #include "prov/implementations.h"
 #include "prov/provider_util.h"
+#include "prov/securitycheck.h"
 #include "e_os.h"
 
 #define HKDF_MAXBUF 2048
@@ -151,6 +152,8 @@ static int kdf_hkdf_derive(void *vctx, unsigned char *key, size_t keylen,
     KDF_HKDF *ctx = (KDF_HKDF *)vctx;
     OSSL_LIB_CTX *libctx = PROV_LIBCTX_OF(ctx->provctx);
     const EVP_MD *md;
+
+    ossl_record_fips_unapproved_usage(libctx);
 
     if (!ossl_prov_is_running() || !kdf_hkdf_set_ctx_params(ctx, params))
         return 0;
