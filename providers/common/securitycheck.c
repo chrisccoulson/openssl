@@ -202,37 +202,6 @@ int ossl_record_fips_unapproved_ec_key_usage(OSSL_LIB_CTX *ctx,
 #endif /* OPENSSL_NO_EC */
 
 #ifndef OPENSSL_NO_DSA
-static int dsa_check_key(const DSA *dsa, int sign)
-{
-    size_t L, N;
-    const BIGNUM *p, *q;
-
-    if (dsa == NULL)
-        return 0;
-
-    p = DSA_get0_p(dsa);
-    q = DSA_get0_q(dsa);
-    if (p == NULL || q == NULL)
-        return 0;
-
-    L = BN_num_bits(p);
-    N = BN_num_bits(q);
-
-    /*
-     * For Digital signature verification DSA keys with < 112 bits of
-     * security strength (i.e L < 2048 bits), are still allowed for legacy
-     * use. The bounds given in SP800 131Ar2 - Table 2 are
-     * (512 <= L < 2048 and 160 <= N < 224)
-     */
-    if (!sign && L < 2048)
-        return (L >= 512 && N >= 160 && N < 224);
-
-    /* Valid sizes for both sign and verify */
-    if (L == 2048 && (N == 224 || N == 256))
-        return 1;
-    return (L == 3072 && N == 256);
-}
-
 /*
  * Check for valid key sizes if fips mode. Refer to
  * https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-131Ar2.pdf
@@ -241,21 +210,36 @@ static int dsa_check_key(const DSA *dsa, int sign)
 int ossl_dsa_check_key(OSSL_LIB_CTX *ctx, const DSA *dsa, int sign)
 {
 # if !defined(OPENSSL_NO_FIPS_SECURITYCHECKS)
-    if (ossl_securitycheck_enabled(ctx))
-        return dsa_check_key(dsa, sign);
+    if (ossl_securitycheck_enabled(ctx)) {
+        size_t L, N;
+        const BIGNUM *p, *q;
+
+        if (dsa == NULL)
+            return 0;
+
+        p = DSA_get0_p(dsa);
+        q = DSA_get0_q(dsa);
+        if (p == NULL || q == NULL)
+            return 0;
+
+        L = BN_num_bits(p);
+        N = BN_num_bits(q);
+
+        /*
+         * For Digital signature verification DSA keys with < 112 bits of
+         * security strength (i.e L < 2048 bits), are still allowed for legacy
+         * use. The bounds given in SP800 131Ar2 - Table 2 are
+         * (512 <= L < 2048 and 160 <= N < 224)
+         */
+        if (!sign && L < 2048)
+            return (L >= 512 && N >= 160 && N < 224);
+
+        /* Valid sizes for both sign and verify */
+        if (L == 2048 && (N == 224 || N == 256))
+            return 1;
+        return (L == 3072 && N == 256);
+    }
 # endif /* OPENSSL_NO_FIPS_SECURITYCHECKS */
-    return 1;
-}
-
-int ossl_record_fips_unapproved_dsa_key_usage(OSSL_LIB_CTX *ctx,
-                                              const DSA *dsa, int sign)
-{
-    if (dsa == NULL)
-        return 1;
-
-    if (!dsa_check_key(dsa, sign))
-        return ossl_record_fips_unapproved_usage(ctx);
-
     return 1;
 }
 #endif /* OPENSSL_NO_DSA */
