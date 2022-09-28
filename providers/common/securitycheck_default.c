@@ -39,12 +39,6 @@ int ossl_record_fips_unapproved_ec_key_usage(OSSL_LIB_CTX *libctx,
     return 1;
 }
 
-int ossl_record_fips_unapproved_dsa_key_usage(OSSL_LIB_CTX *libctx,
-                                              const DSA *dsa, int sign)
-{
-    return 1;
-}
-
 int ossl_record_fips_unapproved_dh_key_usage(OSSL_LIB_CTX *ctx, const DH *dh)
 {
     return 1;

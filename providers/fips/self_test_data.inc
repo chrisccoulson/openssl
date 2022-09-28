@@ -1434,7 +1434,7 @@ static const ST_KAT_PARAM ecdsa_bin_key[] = {
 # endif /* OPENSSL_NO_EC2M */
 #endif /* OPENSSL_NO_EC */
 
-#ifndef OPENSSL_NO_DSA
+#if 0 /* DSA is not approved */
 /* dsa 2048 */
 static const unsigned char dsa_p[] = {
     0xa2, 0x9b, 0x88, 0x72, 0xce, 0x8b, 0x84, 0x23,
@@ -1593,7 +1593,7 @@ static const ST_KAT_SIGN st_kat_sign_tests[] = {
     },
 # endif
 #endif /* OPENSSL_NO_EC */
-#ifndef OPENSSL_NO_DSA
+#if 0 /* DSA is not approved */
     {
         OSSL_SELF_TEST_DESC_SIGN_DSA,
         "DSA",

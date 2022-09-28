@@ -91,20 +91,6 @@ int ossl_record_fips_unapproved_ec_key_usage(OSSL_LIB_CTX *ctx,
 }
 #endif /* OPENSSL_NO_EC */
 
-#ifndef OPENSSL_NO_DSA
-int ossl_record_fips_unapproved_dsa_key_usage(OSSL_LIB_CTX *ctx,
-                                              const DSA *dsa, int sign)
-{
-    if (dsa == NULL)
-        return 1;
-
-    if (!dsa_check_key(dsa, sign))
-        return ossl_record_fips_unapproved_usage(ctx);
-
-    return 1;
-}
-#endif /* OPENSSL_NO_DSA */
-
 #ifndef OPENSSL_NO_DH
 int ossl_record_fips_unapproved_dh_key_usage(OSSL_LIB_CTX *ctx, const DH *dh)
 {

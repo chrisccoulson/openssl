@@ -41,8 +41,6 @@ int ossl_record_fips_unapproved_rsa_key_usage(OSSL_LIB_CTX *libctx,
                                               const RSA *rsa, int operation);
 int ossl_record_fips_unapproved_ec_key_usage(OSSL_LIB_CTX *libctx,
                                              const EC_KEY *ec, int protect);
-int ossl_record_fips_unapproved_dsa_key_usage(OSSL_LIB_CTX *libctx,
-                                              const DSA *dsa, int sign);
 int ossl_record_fips_unapproved_dh_key_usage(OSSL_LIB_CTX *ctx, const DH *dh);
 int ossl_record_fips_unapproved_digest_usage(OSSL_LIB_CTX *ctx,
                                              const EVP_MD *md,

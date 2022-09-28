@@ -11,5 +11,4 @@
 
 int rsa_check_key_size(const RSA *rsa, int protect);
 int ec_check_key(const EC_KEY *ec, int protect);
-int dsa_check_key(const DSA *dsa, int sign);
 int dh_check_key(const DH *dh);
