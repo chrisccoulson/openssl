@@ -143,10 +143,12 @@ static int rsa_encrypt(void *vprsactx, unsigned char *out, size_t *outlen,
     if (prsactx->pad_mode == RSA_PKCS1_OAEP_PADDING) {
         if (prsactx->oaep_md != NULL)
             ossl_record_fips_unapproved_digest_usage(prsactx->libctx,
-                                                     prsactx->oaep_md, 1);
+                                                     prsactx->oaep_md,
+                                                     SC_ALLOW_ALL_DIGESTS);
         if (prsactx->mgf1_md != NULL)
             ossl_record_fips_unapproved_digest_usage(prsactx->libctx,
-                                                     prsactx->mgf1_md, 1);
+                                                     prsactx->mgf1_md,
+                                                     SC_ALLOW_ALL_DIGESTS);
     }
     ossl_record_fips_unapproved_rsa_padding_usage(prsactx->libctx,
                                                   prsactx->pad_mode,
@@ -223,10 +225,12 @@ static int rsa_decrypt(void *vprsactx, unsigned char *out, size_t *outlen,
     if (prsactx->pad_mode == RSA_PKCS1_OAEP_PADDING) {
         if (prsactx->oaep_md != NULL)
             ossl_record_fips_unapproved_digest_usage(prsactx->libctx,
-                                                     prsactx->oaep_md, 1);
+                                                     prsactx->oaep_md,
+                                                     SC_ALLOW_ALL_DIGESTS);
         if (prsactx->mgf1_md != NULL)
             ossl_record_fips_unapproved_digest_usage(prsactx->libctx,
-                                                     prsactx->mgf1_md, 1);
+                                                     prsactx->mgf1_md,
+                                                     SC_ALLOW_ALL_DIGESTS);
     }
     ossl_record_fips_unapproved_rsa_padding_usage(prsactx->libctx,
                                                   prsactx->pad_mode,

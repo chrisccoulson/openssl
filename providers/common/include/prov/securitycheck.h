@@ -9,6 +9,13 @@
 
 #include "crypto/types.h"
 
+#define SC_ALLOW_ALL_DIGESTS    0
+#define SC_DISALLOW_SHA1        1
+#define SC_SSHKDF_DIGESTS       2
+#define SC_TLS1_3_KDF_DIGESTS   3
+#define SC_X963_KDF_DIGESTS     4
+#define SC_TLS1_PRF_DIGESTS     5
+
 /* Functions that are common */
 int ossl_rsa_check_key(OSSL_LIB_CTX *ctx, const RSA *rsa, int operation);
 int ossl_ec_check_key(OSSL_LIB_CTX *ctx, const EC_KEY *ec, int protect);
@@ -16,6 +23,8 @@ int ossl_dsa_check_key(OSSL_LIB_CTX *ctx, const DSA *dsa, int sign);
 int ossl_dh_check_key(OSSL_LIB_CTX *ctx, const DH *dh);
 
 int ossl_digest_is_allowed(OSSL_LIB_CTX *ctx, const EVP_MD *md);
+int ossl_digest_is_allowed_ex(OSSL_LIB_CTX *ctx, const EVP_MD *md, int option);
+
 /* With security check enabled it can return -1 to indicate disallowed md */
 int ossl_digest_get_approved_nid_with_sha1(OSSL_LIB_CTX *ctx, const EVP_MD *md,
                                            int sha1_allowed);
@@ -44,6 +53,6 @@ int ossl_record_fips_unapproved_ec_key_usage(OSSL_LIB_CTX *libctx,
 int ossl_record_fips_unapproved_dh_key_usage(OSSL_LIB_CTX *ctx, const DH *dh);
 int ossl_record_fips_unapproved_digest_usage(OSSL_LIB_CTX *ctx,
                                              const EVP_MD *md,
-                                             int sha1_allowed);
+                                             int option);
 int ossl_record_fips_unapproved_rsa_padding_usage(OSSL_LIB_CTX *ctx,
                                                   int padding, int operation);

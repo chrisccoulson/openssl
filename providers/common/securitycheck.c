@@ -314,26 +314,61 @@ int ossl_digest_get_approved_nid_with_sha1(OSSL_LIB_CTX *ctx, const EVP_MD *md,
     return mdnid;
 }
 
-int ossl_digest_is_allowed(OSSL_LIB_CTX *ctx, const EVP_MD *md)
+static int digest_is_allowed(const EVP_MD *md, int option)
+{
+    int mdnid = ossl_digest_get_approved_nid(md);
+    if (mdnid == NID_undef)
+        return 0;
+
+    switch (option) {
+    case SC_ALLOW_ALL_DIGESTS:
+        return 1;
+    case SC_DISALLOW_SHA1:
+        return mdnid != NID_sha1;
+    case SC_SSHKDF_DIGESTS:
+        return mdnid != NID_sha3_224
+            && mdnid != NID_sha3_256
+            && mdnid != NID_sha3_384
+            && mdnid != NID_sha3_512;
+    case SC_TLS1_3_KDF_DIGESTS:
+        return mdnid == NID_sha256 || mdnid == NID_sha384;
+    case SC_X963_KDF_DIGESTS:
+        return mdnid != NID_sha1
+            && mdnid != NID_sha3_224
+            && mdnid != NID_sha3_256
+            && mdnid != NID_sha3_384
+            && mdnid != NID_sha3_512;
+    case SC_TLS1_PRF_DIGESTS:
+        return mdnid == NID_sha256
+            || mdnid == NID_sha384
+            || mdnid == NID_sha512;
+    default:
+        return 0;
+    }
+}
+
+int ossl_digest_is_allowed_ex(OSSL_LIB_CTX *ctx, const EVP_MD *md, int option)
 {
 # if !defined(OPENSSL_NO_FIPS_SECURITYCHECKS)
     if (ossl_securitycheck_enabled(ctx))
-        return ossl_digest_get_approved_nid(md) != NID_undef;
+        return digest_is_allowed(md, option);
 # endif /* OPENSSL_NO_FIPS_SECURITYCHECKS */
     return 1;
 }
 
+int ossl_digest_is_allowed(OSSL_LIB_CTX *ctx, const EVP_MD *md)
+{
+    return ossl_digest_is_allowed_ex(ctx, md, SC_ALLOW_ALL_DIGESTS);
+}
+
 int ossl_record_fips_unapproved_digest_usage(OSSL_LIB_CTX *ctx,
                                              const EVP_MD *md,
-                                             int sha1_allowed)
+                                             int option)
 {
-    int mdnid;
-
     if (md == NULL)
         return 1;
 
-    mdnid = ossl_digest_get_approved_nid(md);
-    if (mdnid == NID_undef || (mdnid == NID_sha1 && !sha1_allowed))
+    if (!digest_is_allowed(md, option))
         return ossl_record_fips_unapproved_usage(ctx);
 
     return 1;

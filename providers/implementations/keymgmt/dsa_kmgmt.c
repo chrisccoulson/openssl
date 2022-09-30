@@ -389,7 +389,8 @@ static int dsa_validate(const void *keydata, int selection, int checktype)
         FFC_PARAMS *ffc = ossl_dsa_get0_params((DSA *)dsa);
         if (ffc->mdname != NULL) {
             EVP_MD *md = EVP_MD_fetch(ctx, ffc->mdname, ffc->mdprops);
-            ossl_record_fips_unapproved_digest_usage(ctx, md, 1);
+            ossl_record_fips_unapproved_digest_usage(ctx, md,
+                                                     SC_ALLOW_ALL_DIGESTS);
             EVP_MD_free(md);
         }
         ok = ok && dsa_validate_domparams(dsa, checktype);
@@ -607,7 +608,8 @@ static void *dsa_gen(void *genctx, OSSL_CALLBACK *osslcb, void *cbarg)
     }
     if (gctx->mdname != NULL) {
         EVP_MD *md = EVP_MD_fetch(gctx->libctx, gctx->mdname, gctx->mdprops);
-        ossl_record_fips_unapproved_digest_usage(gctx->libctx, md, 1);
+        ossl_record_fips_unapproved_digest_usage(gctx->libctx, md,
+                                                 SC_ALLOW_ALL_DIGESTS);
         EVP_MD_free(md);
         if (!ossl_ffc_set_digest(ffc, gctx->mdname, gctx->mdprops))
             goto end;
