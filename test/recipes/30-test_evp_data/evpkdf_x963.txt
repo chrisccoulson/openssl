@@ -17,6 +17,7 @@
 
 Title = X963 KDF tests (from NIST test vectors)
 
+Availablein = default
 KDF = X963KDF
 Ctrl.digest = digest:SHA1
 Ctrl.hexsecret = hexsecret:fd17198b89ab39c4ab5d7cca363b82f9fd7e23c3984dc8a2
@@ -111,8 +112,48 @@ Ctrl.hexsecret = hexsecret:0037cd001a0ad87f35ddf58ab355d6144ba2ed0749a7435dab548
 Ctrl.hexinfo = hexinfo:eb17da8851c41c7ac6710b1c49f324f8
 Output = 829a28b81f9e95b5f306604067499c07d5944ca034ed130d513951f7143e4e162bad8adb2833e53b8235c293cd2a809659ac7f7e392cba6a543660e5d95070c0c9e6a9cdc38123e22da61bb4cbb6ad6d1a58a069e934fc231bd9fe39a24afcbf322ccea385f0418f3b01c1edd6e7124593a1cefe3e48fcd95daaf72cfd973c59
 
-# Test that we can't specify an extendable-output hash function in the FIPS
+# Test that we can't specify non-approved hash function in the FIPS
 # provider by default
+
+Availablein = fips
+KDF = X963KDF
+Ctrl.digest = digest:SHA1
+Ctrl.hexsecret = hexsecret:fd17198b89ab39c4ab5d7cca363b82f9fd7e23c3984dc8a2
+Ctrl.hexinfo = hexinfo:856a53f3e36a26bbc5792879f307cce2
+Output = FF
+Result = KDF_CTRL_ERROR
+
+Availablein = fips
+KDF = X963KDF
+Ctrl.digest = digest:SHA3-224
+Ctrl.hexsecret = hexsecret:fd17198b89ab39c4ab5d7cca363b82f9fd7e23c3984dc8a2
+Ctrl.hexinfo = hexinfo:856a53f3e36a26bbc5792879f307cce2
+Output = FF
+Result = KDF_CTRL_ERROR
+
+Availablein = fips
+KDF = X963KDF
+Ctrl.digest = digest:SHA3-256
+Ctrl.hexsecret = hexsecret:fd17198b89ab39c4ab5d7cca363b82f9fd7e23c3984dc8a2
+Ctrl.hexinfo = hexinfo:856a53f3e36a26bbc5792879f307cce2
+Output = FF
+Result = KDF_CTRL_ERROR
+
+Availablein = fips
+KDF = X963KDF
+Ctrl.digest = digest:SHA3-384
+Ctrl.hexsecret = hexsecret:fd17198b89ab39c4ab5d7cca363b82f9fd7e23c3984dc8a2
+Ctrl.hexinfo = hexinfo:856a53f3e36a26bbc5792879f307cce2
+Output = FF
+Result = KDF_CTRL_ERROR
+
+Availablein = fips
+KDF = X963KDF
+Ctrl.digest = digest:SHA3-512
+Ctrl.hexsecret = hexsecret:fd17198b89ab39c4ab5d7cca363b82f9fd7e23c3984dc8a2
+Ctrl.hexinfo = hexinfo:856a53f3e36a26bbc5792879f307cce2
+Output = FF
+Result = KDF_CTRL_ERROR
 
 Availablein = fips
 KDF = X963KDF

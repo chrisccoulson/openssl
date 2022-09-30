@@ -439,7 +439,7 @@ static int x942kdf_derive(void *vctx, unsigned char *key, size_t keylen,
         return 0;
     }
     ossl_record_fips_unapproved_digest_usage(PROV_LIBCTX_OF(ctx->provctx), md,
-                                             1);
+                                             0);
     if (ctx->cek_oid == NULL || ctx->cek_oid_len == 0) {
         ERR_raise(ERR_LIB_PROV, PROV_R_MISSING_CEK_ALG);
         return 0;

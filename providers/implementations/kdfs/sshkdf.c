@@ -112,7 +112,7 @@ static int kdf_sshkdf_derive(void *vctx, unsigned char *key, size_t keylen,
         return 0;
     }
     ossl_record_fips_unapproved_digest_usage(PROV_LIBCTX_OF(ctx->provctx), md,
-                                             1);
+                                             SC_DIGESTS_DISALLOW_SHA3);
     if (ctx->key == NULL) {
         ERR_raise(ERR_LIB_PROV, PROV_R_MISSING_KEY);
         return 0;
@@ -149,7 +149,8 @@ static int kdf_sshkdf_set_ctx_params(void *vctx, const OSSL_PARAM params[])
         return 0;
 
     md = ossl_prov_digest_md(&ctx->digest);
-    if (md != NULL && !ossl_digest_is_allowed(provctx, md)) {
+    if (md != NULL && !ossl_digest_is_allowed_ex(provctx, md,
+                                                 SC_DIGESTS_DISALLOW_SHA3)) {
         ERR_raise(ERR_LIB_PROV, PROV_R_DIGEST_NOT_ALLOWED);
         ossl_prov_digest_reset(&ctx->digest);
         return 0;

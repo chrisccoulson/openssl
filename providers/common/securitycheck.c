@@ -252,11 +252,57 @@ int ossl_digest_get_approved_nid_with_sha1(OSSL_LIB_CTX *ctx, const EVP_MD *md,
     return mdnid;
 }
 
-int ossl_digest_is_allowed(OSSL_LIB_CTX *ctx, const EVP_MD *md)
+int digest_is_allowed(const EVP_MD *md, int flags)
+{
+    int allowall = 1;
+    int mdnid = ossl_digest_get_approved_nid(md);
+    if (mdnid == NID_undef)
+        return 0;
+
+    if ((flags & SC_DIGESTS_DISALLOW_SHA1) != 0) {
+        if (mdnid == NID_sha1)
+            return 0;
+    }
+    if ((flags & SC_DIGESTS_DISALLOW_SHA3) != 0) {
+        if (mdnid == NID_sha3_224
+            || mdnid == NID_sha3_256
+            || mdnid == NID_sha3_384
+            || mdnid == NID_sha3_512)
+            return 0;
+    }
+
+    if ((flags & SC_DIGESTS_ALLOW_SHA2_256) != 0) {
+        if (mdnid == NID_sha256)
+            return 1;
+        allowall = 0;
+    }
+    if ((flags & SC_DIGESTS_ALLOW_SHA2_384) != 0) {
+        if (mdnid == NID_sha384)
+            return 1;
+        allowall = 0;
+    }
+    if ((flags & SC_DIGESTS_ALLOW_SHA2_512) != 0) {
+        if (mdnid == NID_sha512)
+            return 1;
+        allowall = 0;
+    }
+
+    if (!allowall)
+        return 0;
+
+    return 1;
+}
+
+int ossl_digest_is_allowed_ex(OSSL_LIB_CTX *ctx, const EVP_MD *md, int flags)
 {
 # if !defined(OPENSSL_NO_FIPS_SECURITYCHECKS)
     if (ossl_securitycheck_enabled(ctx))
-        return ossl_digest_get_approved_nid(md) != NID_undef;
+        return digest_is_allowed(md, flags);
 # endif /* OPENSSL_NO_FIPS_SECURITYCHECKS */
     return 1;
+}
+
+int ossl_digest_is_allowed(OSSL_LIB_CTX *ctx, const EVP_MD *md)
+{
+    return ossl_digest_is_allowed_ex(ctx, md, 0);
 }

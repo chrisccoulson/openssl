@@ -628,9 +628,11 @@ static int rsa_sign_int(PROV_RSA_CTX *prsactx, unsigned char *sig,
                 }
             }
             ossl_record_fips_unapproved_digest_usage(prsactx->libctx,
-                                                     prsactx->md, 0);
+                                                     prsactx->md,
+                                                     SC_DIGESTS_DISALLOW_SHA1);
             ossl_record_fips_unapproved_digest_usage(prsactx->libctx,
-                                                     prsactx->mgf1_md, 0);
+                                                     prsactx->mgf1_md,
+                                                     SC_DIGESTS_DISALLOW_SHA1);
             if (!setup_tbuf(prsactx))
                 return 0;
             if (!RSA_padding_add_PKCS1_PSS_mgf1(prsactx->rsa,
@@ -835,9 +837,9 @@ static int rsa_verify_int(PROV_RSA_CTX *prsactx, const unsigned char *sig,
                 }
 
                 ossl_record_fips_unapproved_digest_usage(prsactx->libctx,
-                                                         prsactx->md, 1);
+                                                         prsactx->md, 0);
                 ossl_record_fips_unapproved_digest_usage(prsactx->libctx,
-                                                         prsactx->mgf1_md, 1);
+                                                         prsactx->mgf1_md, 0);
 
                 if (!setup_tbuf(prsactx))
                     return 0;
@@ -962,7 +964,7 @@ static int rsa_digest_sign_final(void *vprsactx, unsigned char *sig,
 
     ossl_record_fips_unapproved_digest_usage(prsactx->libctx,
                                              EVP_MD_CTX_get0_md(prsactx->mdctx),
-                                             0);
+                                             SC_DIGESTS_DISALLOW_SHA1);
 
     if (!ossl_prov_is_running())
         return 0;
@@ -1007,7 +1009,7 @@ int rsa_digest_verify_final(void *vprsactx, const unsigned char *sig,
 
     ossl_record_fips_unapproved_digest_usage(prsactx->libctx,
                                              EVP_MD_CTX_get0_md(prsactx->mdctx),
-                                             1);
+                                             0);
 
     if (!ossl_prov_is_running())
         return 0;

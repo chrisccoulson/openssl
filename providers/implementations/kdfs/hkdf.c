@@ -659,10 +659,9 @@ static int kdf_tls1_3_derive(void *vctx, unsigned char *key, size_t keylen,
         ERR_raise(ERR_LIB_PROV, PROV_R_MISSING_MESSAGE_DIGEST);
         return 0;
     }
-    /*
-     * XXX: The HMAC implementation rejects XOF digests even if securitycheck
-     * is disabled, so no need to check for an unapproved digest here.
-     */
+    ossl_record_fips_unapproved_digest_usage(libctx, md,
+                                             SC_DIGESTS_ALLOW_SHA2_256
+                                             |SC_DIGESTS_ALLOW_SHA2_384);
 
     switch (ctx->mode) {
     default:
@@ -689,12 +688,22 @@ static int kdf_tls1_3_set_ctx_params(void *vctx, const OSSL_PARAM params[])
 {
     const OSSL_PARAM *p;
     KDF_HKDF *ctx = vctx;
+    const EVP_MD *md;
 
     if (params == NULL)
         return 1;
 
     if (!hkdf_common_set_ctx_params(ctx, params))
         return 0;
+
+    md = ossl_prov_digest_md(&ctx->digest);
+    if (md != NULL && !ossl_digest_is_allowed_ex(PROV_LIBCTX_OF(ctx->provctx),
+                                                 md, SC_DIGESTS_ALLOW_SHA2_256
+                                                 |SC_DIGESTS_ALLOW_SHA2_384)) {
+        ERR_raise(ERR_LIB_PROV, PROV_R_DIGEST_NOT_ALLOWED);
+        ossl_prov_digest_reset(&ctx->digest);
+        return 0;
+    }
 
     if (ctx->mode == EVP_KDF_HKDF_MODE_EXTRACT_AND_EXPAND) {
         ERR_raise(ERR_LIB_PROV, PROV_R_INVALID_MODE);

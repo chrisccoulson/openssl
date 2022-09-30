@@ -46,7 +46,7 @@ int ossl_record_fips_unapproved_dh_key_usage(OSSL_LIB_CTX *ctx, const DH *dh)
 
 int ossl_record_fips_unapproved_digest_usage(OSSL_LIB_CTX *ctx,
                                              const EVP_MD *md,
-                                             int sha1_allowed)
+                                             int flags)
 {
     return 1;
 }

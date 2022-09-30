@@ -60,6 +60,7 @@
 #include "prov/providercommon.h"
 #include "prov/implementations.h"
 #include "prov/provider_util.h"
+#include "prov/securitycheck.h"
 #include "e_os.h"
 
 static OSSL_FUNC_kdf_newctx_fn kdf_tls1_prf_new;
@@ -81,6 +82,9 @@ static int tls1_prf_alg(EVP_MAC_CTX *mdctx, EVP_MAC_CTX *sha1ctx,
 /* TLS KDF kdf context structure */
 typedef struct {
     void *provctx;
+
+    /* Main digest */
+    PROV_DIGEST digest;
 
     /* MAC context for the main digest */
     EVP_MAC_CTX *P_hash;
@@ -125,6 +129,7 @@ static void kdf_tls1_prf_reset(void *vctx)
     TLS1_PRF *ctx = (TLS1_PRF *)vctx;
     void *provctx = ctx->provctx;
 
+    ossl_prov_digest_reset(&ctx->digest);
     EVP_MAC_CTX_free(ctx->P_hash);
     EVP_MAC_CTX_free(ctx->P_sha1);
     OPENSSL_clear_free(ctx->sec, ctx->seclen);
@@ -137,9 +142,18 @@ static int kdf_tls1_prf_derive(void *vctx, unsigned char *key, size_t keylen,
                                const OSSL_PARAM params[])
 {
     TLS1_PRF *ctx = (TLS1_PRF *)vctx;
+    OSSL_LIB_CTX *libctx = PROV_LIBCTX_OF(ctx->provctx);
 
     if (!ossl_prov_is_running() || !kdf_tls1_prf_set_ctx_params(ctx, params))
         return 0;
+
+    if (ctx->P_sha1 != NULL)
+        ossl_record_fips_unapproved_usage(libctx);
+    ossl_record_fips_unapproved_digest_usage(libctx,
+                                             ossl_prov_digest_md(&ctx->digest),
+                                             SC_DIGESTS_ALLOW_SHA2_256
+                                             |SC_DIGESTS_ALLOW_SHA2_384
+                                             |SC_DIGESTS_ALLOW_SHA2_512);
 
     if (ctx->P_hash == NULL) {
         ERR_raise(ERR_LIB_PROV, PROV_R_MISSING_MESSAGE_DIGEST);
@@ -175,6 +189,11 @@ static int kdf_tls1_prf_set_ctx_params(void *vctx, const OSSL_PARAM params[])
 
     if ((p = OSSL_PARAM_locate_const(params, OSSL_KDF_PARAM_DIGEST)) != NULL) {
         if (OPENSSL_strcasecmp(p->data, SN_md5_sha1) == 0) {
+            /*
+             * This case will fail in the FIPS provider because of the lack
+             * of md5.
+             */
+            ossl_prov_digest_reset(&ctx->digest);
             if (!ossl_prov_macctx_load_from_params(&ctx->P_hash, params,
                                                    OSSL_MAC_NAME_HMAC,
                                                    NULL, SN_md5, libctx)
@@ -184,6 +203,15 @@ static int kdf_tls1_prf_set_ctx_params(void *vctx, const OSSL_PARAM params[])
                 return 0;
         } else {
             EVP_MAC_CTX_free(ctx->P_sha1);
+            if (!ossl_prov_digest_load_from_params(&ctx->digest, params,
+                                                   libctx))
+                return 0;
+            if (!ossl_digest_is_allowed_ex(libctx,
+                                           ossl_prov_digest_md(&ctx->digest),
+                                           SC_DIGESTS_ALLOW_SHA2_256
+                                           |SC_DIGESTS_ALLOW_SHA2_384
+                                           |SC_DIGESTS_ALLOW_SHA2_512))
+                return 0;
             if (!ossl_prov_macctx_load_from_params(&ctx->P_hash, params,
                                                    OSSL_MAC_NAME_HMAC,
                                                    NULL, NULL, libctx))

@@ -881,12 +881,29 @@ static unsigned char kdf_key[] = {'k', 'e', 'y'};
 static unsigned char sshkdf_xcghash[] = {'x', 'c', 'g', 'h', 'a', 's', 'h'};
 static unsigned char sshkdf_session_id[] = {
     's', 'e', 's', 's', 'i', 'o', 'n', '_', 'i', 'd'};
+static unsigned char tls1_seed[] = {'s', 'e', 'e', 'd'};
+static char tls13_extract_mode[] = "EXTRACT_ONLY";
 
 static const KDF_DATA kdf_data[] = {
     {"SSHKDF",
         {
             OSSL_PARAM_utf8_string(OSSL_KDF_PARAM_DIGEST, SN_shake256,
                                    sizeof(SN_shake256) - 1),
+            OSSL_PARAM_utf8_string(OSSL_KDF_PARAM_SSHKDF_TYPE, &sshkdf_type_a,
+                                   1),
+            OSSL_PARAM_octet_string(OSSL_KDF_PARAM_KEY, kdf_key,
+                                    sizeof(kdf_key)),
+            OSSL_PARAM_octet_string(OSSL_KDF_PARAM_SSHKDF_XCGHASH,
+                                    sshkdf_xcghash, sizeof(sshkdf_xcghash)),
+            OSSL_PARAM_octet_string(OSSL_KDF_PARAM_SSHKDF_SESSION_ID,
+                                    sshkdf_session_id,
+                                    sizeof(sshkdf_session_id)),
+            OSSL_PARAM_END
+        }, 1},
+    {"SSHKDF",
+        {
+            OSSL_PARAM_utf8_string(OSSL_KDF_PARAM_DIGEST, SN_sha3_256,
+                                   sizeof(SN_sha3_256)),
             OSSL_PARAM_utf8_string(OSSL_KDF_PARAM_SSHKDF_TYPE, &sshkdf_type_a,
                                    1),
             OSSL_PARAM_octet_string(OSSL_KDF_PARAM_KEY, kdf_key,
@@ -943,6 +960,22 @@ static const KDF_DATA kdf_data[] = {
         }, 1},
     {"X963KDF",
         {
+            OSSL_PARAM_utf8_string(OSSL_KDF_PARAM_DIGEST, SN_sha1,
+                                   sizeof(SN_sha1)),
+            OSSL_PARAM_octet_string(OSSL_KDF_PARAM_KEY, kdf_key,
+                                    sizeof(kdf_key)),
+            OSSL_PARAM_END
+        }, 1},
+    {"X963KDF",
+        {
+            OSSL_PARAM_utf8_string(OSSL_KDF_PARAM_DIGEST, SN_sha3_256,
+                                   sizeof(SN_sha3_256)),
+            OSSL_PARAM_octet_string(OSSL_KDF_PARAM_KEY, kdf_key,
+                                    sizeof(kdf_key)),
+            OSSL_PARAM_END
+        }, 1},
+    {"X963KDF",
+        {
             OSSL_PARAM_utf8_string(OSSL_KDF_PARAM_DIGEST, SN_sha256,
                                    sizeof(SN_sha256) - 1),
             OSSL_PARAM_octet_string(OSSL_KDF_PARAM_KEY, kdf_key,
@@ -964,7 +997,77 @@ static const KDF_DATA kdf_data[] = {
             OSSL_PARAM_octet_string(OSSL_KDF_PARAM_KEY, kdf_key,
                                     sizeof(kdf_key)),
             OSSL_PARAM_END
-        }, 1}
+        }, 1},
+    {"TLS1-PRF",
+        {
+            OSSL_PARAM_utf8_string(OSSL_KDF_PARAM_DIGEST, SN_sha1,
+                                   sizeof(SN_sha1) - 1),
+            OSSL_PARAM_octet_string(OSSL_KDF_PARAM_SECRET, kdf_key,
+                                    sizeof(kdf_key)),
+            OSSL_PARAM_octet_string(OSSL_KDF_PARAM_SEED, tls1_seed,
+                                    sizeof(tls1_seed)),
+            OSSL_PARAM_END
+        }, 1},
+    {"TLS1-PRF",
+        {
+            OSSL_PARAM_utf8_string(OSSL_KDF_PARAM_DIGEST, SN_sha3_256,
+                                   sizeof(SN_sha3_256) - 1),
+            OSSL_PARAM_octet_string(OSSL_KDF_PARAM_SECRET, kdf_key,
+                                    sizeof(kdf_key)),
+            OSSL_PARAM_octet_string(OSSL_KDF_PARAM_SEED, tls1_seed,
+                                    sizeof(tls1_seed)),
+            OSSL_PARAM_END
+        }, 1},
+    {"TLS1-PRF",
+        {
+            OSSL_PARAM_utf8_string(OSSL_KDF_PARAM_DIGEST, SN_sha256,
+                                   sizeof(SN_sha256) - 1),
+            OSSL_PARAM_octet_string(OSSL_KDF_PARAM_SECRET, kdf_key,
+                                    sizeof(kdf_key)),
+            OSSL_PARAM_octet_string(OSSL_KDF_PARAM_SEED, tls1_seed,
+                                    sizeof(tls1_seed)),
+            OSSL_PARAM_END
+        }, 0},
+    {"TLS13-KDF",
+        {
+            OSSL_PARAM_utf8_string(OSSL_KDF_PARAM_DIGEST, SN_sha1,
+                                   sizeof(SN_sha1) - 1),
+            OSSL_PARAM_octet_string(OSSL_KDF_PARAM_KEY, kdf_key,
+                                    sizeof(kdf_key)),
+            OSSL_PARAM_utf8_string(OSSL_KDF_PARAM_MODE, tls13_extract_mode,
+                                   sizeof(tls13_extract_mode) - 1),
+            OSSL_PARAM_END
+        }, 1},
+    {"TLS13-KDF",
+        {
+            OSSL_PARAM_utf8_string(OSSL_KDF_PARAM_DIGEST, SN_sha512,
+                                   sizeof(SN_sha512) - 1),
+            OSSL_PARAM_octet_string(OSSL_KDF_PARAM_KEY, kdf_key,
+                                    sizeof(kdf_key)),
+            OSSL_PARAM_utf8_string(OSSL_KDF_PARAM_MODE, tls13_extract_mode,
+                                   sizeof(tls13_extract_mode) - 1),
+            OSSL_PARAM_END
+        }, 1},
+    {"TLS13-KDF",
+        {
+            OSSL_PARAM_utf8_string(OSSL_KDF_PARAM_DIGEST, SN_sha3_256,
+                                   sizeof(SN_sha3_256) - 1),
+            OSSL_PARAM_octet_string(OSSL_KDF_PARAM_KEY, kdf_key,
+                                    sizeof(kdf_key)),
+            OSSL_PARAM_utf8_string(OSSL_KDF_PARAM_MODE, tls13_extract_mode,
+                                   sizeof(tls13_extract_mode) - 1),
+            OSSL_PARAM_END
+        }, 1},
+    {"TLS13-KDF",
+        {
+            OSSL_PARAM_utf8_string(OSSL_KDF_PARAM_DIGEST, SN_sha256,
+                                   sizeof(SN_sha256) - 1),
+            OSSL_PARAM_octet_string(OSSL_KDF_PARAM_KEY, kdf_key,
+                                    sizeof(kdf_key)),
+            OSSL_PARAM_utf8_string(OSSL_KDF_PARAM_MODE, tls13_extract_mode,
+                                   sizeof(tls13_extract_mode) - 1),
+            OSSL_PARAM_END
+        }, 0},
 };
 
 static int test_kdf(int n)

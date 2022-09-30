@@ -363,7 +363,8 @@ int ecdsa_digest_sign_final(void *vctx, unsigned char *sig, size_t *siglen,
         return 0;
 
     ossl_record_fips_unapproved_digest_usage(ctx->libctx,
-                                             EVP_MD_CTX_get0_md(ctx->mdctx), 0);
+                                             EVP_MD_CTX_get0_md(ctx->mdctx),
+                                             SC_DIGESTS_DISALLOW_SHA1);
 
     if (!ossl_prov_is_running() || ctx->mdctx == NULL)
         return 0;
@@ -390,7 +391,7 @@ int ecdsa_digest_verify_final(void *vctx, const unsigned char *sig,
         return 0;
 
     ossl_record_fips_unapproved_digest_usage(ctx->libctx,
-                                             EVP_MD_CTX_get0_md(ctx->mdctx), 1);
+                                             EVP_MD_CTX_get0_md(ctx->mdctx), 0);
 
     if (!ossl_prov_is_running() || ctx->mdctx == NULL)
         return 0;

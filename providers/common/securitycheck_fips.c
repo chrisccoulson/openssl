@@ -106,15 +106,12 @@ int ossl_record_fips_unapproved_dh_key_usage(OSSL_LIB_CTX *ctx, const DH *dh)
 
 int ossl_record_fips_unapproved_digest_usage(OSSL_LIB_CTX *ctx,
                                              const EVP_MD *md,
-                                             int sha1_allowed)
+                                             int flags)
 {
-    int mdnid;
-
     if (md == NULL)
         return 1;
 
-    mdnid = ossl_digest_get_approved_nid(md);
-    if (mdnid == NID_undef || (mdnid == NID_sha1 && !sha1_allowed))
+    if (!digest_is_allowed(md, flags))
         return ossl_record_fips_unapproved_usage(ctx);
 
     return 1;

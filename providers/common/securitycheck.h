@@ -12,3 +12,4 @@
 int rsa_check_key_size(const RSA *rsa, int protect);
 int ec_check_key(const EC_KEY *ec, int protect);
 int dh_check_key(const DH *dh);
+int digest_is_allowed(const EVP_MD *md, int flags);
