@@ -100,13 +100,13 @@ static int dh_init(void *vpdhctx, void *vdh, const OSSL_PARAM params[])
     if (!ossl_prov_is_running()
             || pdhctx == NULL
             || vdh == NULL
-            || !DH_up_ref(vdh))
+            || !DH_up_ref(vdh)
+            || !ossl_dh_check_key(pdhctx->libctx, vdh))
         return 0;
     DH_free(pdhctx->dh);
     pdhctx->dh = vdh;
     pdhctx->kdf_type = PROV_DH_KDF_NONE;
-    return dh_set_ctx_params(pdhctx, params)
-           && ossl_dh_check_key(pdhctx->libctx, vdh);
+    return dh_set_ctx_params(pdhctx, params);
 }
 
 /* The 2 parties must share the same domain parameters */
@@ -116,8 +116,7 @@ static int dh_match_params(DH *priv, DH *peer)
     FFC_PARAMS *dhparams_priv = ossl_dh_get0_params(priv);
     FFC_PARAMS *dhparams_peer = ossl_dh_get0_params(peer);
 
-    ret = dhparams_priv != NULL
-          && dhparams_peer != NULL
+    ret = priv != NULL && peer != NULL
           && ossl_ffc_params_cmp(dhparams_priv, dhparams_peer, 1);
     if (!ret)
         ERR_raise(ERR_LIB_PROV, PROV_R_MISMATCHING_DOMAIN_PARAMETERS);

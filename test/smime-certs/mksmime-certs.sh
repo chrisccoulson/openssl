@@ -70,7 +70,7 @@ $OPENSSL x509 -req -in req.pem -CA smroot.pem -days 36500 \
 #$OPENSSL x509 -req -in req.pem -CA smroot.pem -days 36500 \
 #	-extfile ca.cnf -extensions usr_cert -CAcreateserial >>smec3.pem
 # Create X9.42 DH parameters.
-$OPENSSL genpkey -genparam -algorithm DHX -out dhp.pem
+$OPENSSL genpkey -genparam -algorithm DHX -pkeyopt group:ffdhe2048 -out dhp.pem
 # Generate X9.42 DH key.
 $OPENSSL genpkey -paramfile dhp.pem -out smdh.pem
 $OPENSSL pkey -pubout -in smdh.pem -out dhpub.pem
