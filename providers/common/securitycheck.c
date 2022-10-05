@@ -19,6 +19,7 @@
 #include <openssl/core_names.h>
 #include <openssl/obj_mac.h>
 #include <openssl/self_test.h>
+#include "crypto/dh.h"
 #include "prov/providercommon.h"
 #include "prov/securitycheck.h"
 
@@ -247,29 +248,7 @@ int ossl_dsa_check_key(OSSL_LIB_CTX *ctx, const DSA *dsa, int sign)
 #ifndef OPENSSL_NO_DH
 static int dh_check_key(const DH *dh)
 {
-    size_t L, N;
-    const BIGNUM *p, *q;
-
-    if (dh == NULL)
-        return 0;
-
-    p = DH_get0_p(dh);
-    q = DH_get0_q(dh);
-    if (p == NULL || q == NULL)
-        return 0;
-
-    L = BN_num_bits(p);
-    if (L < 2048)
-        return 0;
-
-    /* If it is a safe prime group then it is ok */
-    if (DH_get_nid(dh))
-        return 1;
-
-    /* If not then it must be FFC, which only allows certain sizes. */
-    N = BN_num_bits(q);
-
-    return (L == 2048 && (N == 224 || N == 256));
+    return ossl_dh_is_named_safe_prime_group(dh);
 }
 
 /*

@@ -165,3 +165,9 @@ Availablein = default
 Derive=ALICE_dh2048
 PeerKeyValidate=BOB_dh2048_badpub_toosmall
 Result = DERIVE_SET_PEER_ERROR
+
+# DH Alice with Bob peer - safe primes are required in the FIPS provider
+Availablein = fips
+Derive=ALICE_dh2048
+PeerKeyValidate=BOB_dh2048_pub
+Result = DERIVE_SET_PEER_ERROR
