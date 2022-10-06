@@ -123,6 +123,22 @@ static int dh_match_params(DH *priv, DH *peer)
     return ret;
 }
 
+#ifdef FIPS_MODULE
+static int dh_check_peer(DH *priv, DH *peer)
+{
+    const BIGNUM *pubkey = DH_get0_pub_key(peer);
+    int status;
+    int ret;
+
+    ret = pubkey != NULL
+        && (!ossl_dh_is_named_safe_prime_group(priv)
+            || ossl_dh_check_pub_key_partial(priv, pubkey, &status));
+    if (!ret)
+        ERR_raise(ERR_LIB_PROV, PROV_R_INVALID_KEY);
+    return ret;
+}
+#endif
+
 static int dh_set_peer(void *vpdhctx, void *vdh)
 {
     PROV_DH_CTX *pdhctx = (PROV_DH_CTX *)vpdhctx;
@@ -130,7 +146,10 @@ static int dh_set_peer(void *vpdhctx, void *vdh)
     if (!ossl_prov_is_running()
             || pdhctx == NULL
             || vdh == NULL
-            || !dh_match_params(vdh, pdhctx->dh)
+            || !dh_match_params(pdhctx->dh, vdh)
+#ifdef FIPS_MODULE
+            || !dh_check_peer(pdhctx->dh, vdh)
+#endif
             || !DH_up_ref(vdh))
         return 0;
     DH_free(pdhctx->dhpeer);
