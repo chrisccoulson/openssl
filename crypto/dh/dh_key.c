@@ -259,6 +259,8 @@ static int generate_key(DH *dh)
     int generate_new_key = 0;
 #ifndef FIPS_MODULE
     unsigned l;
+#else
+    int errflags;
 #endif
     BN_CTX *ctx = NULL;
     BIGNUM *pub_key = NULL, *priv_key = NULL;
@@ -353,6 +355,11 @@ static int generate_key(DH *dh)
 
     if (!ossl_dh_generate_public_key(ctx, dh, priv_key, pub_key))
         goto err;
+
+#ifdef FIPS_MODULE
+    if (!DH_check_pub_key(dh, pub_key, &errflags))
+        goto err;
+#endif
 
     dh->pub_key = pub_key;
     dh->priv_key = priv_key;
