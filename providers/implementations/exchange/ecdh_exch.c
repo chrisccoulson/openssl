@@ -138,6 +138,26 @@ int ecdh_match_params(const EC_KEY *priv, const EC_KEY *peer)
     return ret;
 }
 
+#ifdef FIPS_MODULE
+static
+int ecdh_check_peer(EC_KEY *peer)
+{
+    int ret;
+    BN_CTX *ctx = NULL;
+
+    ctx = BN_CTX_new_ex(ossl_ec_key_get_libctx(peer));
+    if (ctx == NULL) {
+        ERR_raise(ERR_LIB_PROV, ERR_R_MALLOC_FAILURE);
+        return 0;
+    }
+    ret = ossl_ec_key_public_check_quick(peer, ctx);
+    if (!ret)
+        ERR_raise(ERR_LIB_PROV, PROV_R_INVALID_KEY);
+    BN_CTX_free(ctx);
+    return ret;
+}
+#endif
+
 static
 int ecdh_set_peer(void *vpecdhctx, void *vecdh)
 {
@@ -148,6 +168,9 @@ int ecdh_set_peer(void *vpecdhctx, void *vecdh)
             || vecdh == NULL
             || !ecdh_match_params(pecdhctx->k, vecdh)
             || !ossl_ec_check_key(pecdhctx->libctx, vecdh, 1)
+#ifdef FIPS_MODULE
+            || !ecdh_check_peer(vecdh)
+#endif
             || !EC_KEY_up_ref(vecdh))
         return 0;
 
