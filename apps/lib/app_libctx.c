@@ -6,6 +6,7 @@
  * in the file LICENSE in the source distribution or at
  * https://www.openssl.org/source/license.html
  */
+#include <openssl/rand.h>
 #include "app_libctx.h"
 #include "apps.h"
 
@@ -15,6 +16,10 @@ static const char *app_propq = NULL;
 int app_set_propq(const char *arg)
 {
     app_propq = arg;
+    if (!RAND_set_DRBG_type(app_libctx, NULL, arg, NULL, NULL))
+        return 0;
+    if (!RAND_set_seed_source_type(app_libctx, NULL, arg))
+        return 0;
     return 1;
 }
 
