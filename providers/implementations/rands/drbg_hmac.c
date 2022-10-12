@@ -428,5 +428,10 @@ const OSSL_DISPATCH ossl_drbg_ossl_hmac_functions[] = {
       (void(*)(void))drbg_hmac_verify_zeroization },
     { OSSL_FUNC_RAND_GET_SEED, (void(*)(void))ossl_drbg_get_seed },
     { OSSL_FUNC_RAND_CLEAR_SEED, (void(*)(void))ossl_drbg_clear_seed },
+#ifdef FIPS_MODULE
+    { OSSL_FUNC_RAND_GETTABLE_PARAMS,
+        (void(*)(void))ossl_drbg_gettable_params },
+    { OSSL_FUNC_RAND_GET_PARAMS, (void(*)(void))ossl_drbg_get_params },
+#endif
     { 0, NULL }
 };

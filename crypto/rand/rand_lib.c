@@ -26,6 +26,7 @@
 # include <openssl/conf.h>
 # include <openssl/trace.h>
 # include <openssl/engine.h>
+# include "crypto/evp.h"
 # include "crypto/rand_pool.h"
 # include "prov/seeding.h"
 # include "e_os.h"
@@ -554,22 +555,92 @@ static EVP_RAND_CTX *rand_new_seed(OSSL_LIB_CTX *libctx)
 
 static EVP_RAND_CTX *rand_new_drbg(OSSL_LIB_CTX *libctx, EVP_RAND_CTX *parent,
                                    unsigned int reseed_interval,
-                                   time_t reseed_time_interval)
+                                   time_t reseed_time_interval,
+                                   int primary)
 {
     EVP_RAND *rand;
     RAND_GLOBAL *dgbl = rand_get_global(libctx);
     EVP_RAND_CTX *ctx;
     OSSL_PARAM params[7], *p = params;
     char *name, *cipher;
+#ifndef FIPS_MODULE
+    const OSSL_PROVIDER *parent_prov;
+#endif
 
     if (dgbl == NULL)
         return NULL;
+
+#ifndef FIPS_MODULE
+    if (parent != NULL) {
+        parent_prov = EVP_RAND_get0_provider(EVP_RAND_CTX_get0_rand(parent));
+    }
+#endif
+
     name = dgbl->rng_name != NULL ? dgbl->rng_name : "CTR-DRBG";
-    rand = EVP_RAND_fetch(libctx, name, dgbl->rng_propq);
+#ifndef FIPS_MODULE
+    if (primary)
+#endif
+        rand = EVP_RAND_fetch(libctx, name, dgbl->rng_propq);
+#ifndef FIPS_MODULE
+    else {
+        /*
+         * Always fetch non-primary DRBGs from the same provider as the
+         * primary, as our FIPS provider will not allow an approved DRBG to be
+         * seeded by a non FIPS approved DRBG that lives in another provider.
+         */
+        char override[] = "-provider";
+        char *allocated_propq = NULL;
+        char *propq = override;
+
+        OPENSSL_assert(parent_prov != NULL);
+
+        if (dgbl->rng_propq != NULL) {
+            size_t sz = strlen(dgbl->rng_propq) + strlen(override) + 2;
+            propq = allocated_propq = OPENSSL_malloc(sz);
+            if (allocated_propq == NULL) {
+                ERR_raise(ERR_LIB_RAND, ERR_R_MALLOC_FAILURE);
+                return NULL;
+            }
+            OPENSSL_strlcpy(propq, dgbl->rng_propq, sz);
+            OPENSSL_strlcat(propq, ",", sz);
+            OPENSSL_strlcat(propq, override, sz);
+        }
+
+        /* Fetch from the same provider as the primary */
+        rand = evp_rand_fetch_from_prov((OSSL_PROVIDER *)parent_prov, name,
+                                        propq);
+        OPENSSL_free(allocated_propq);
+    }
+#endif
     if (rand == NULL) {
         ERR_raise(ERR_LIB_RAND, RAND_R_UNABLE_TO_FETCH_DRBG);
         return NULL;
     }
+
+#ifndef FIPS_MODULE
+    if (primary && parent != NULL
+        && EVP_RAND_get0_provider(rand) != parent_prov) {
+        /*
+         * If the primary DRBG is FIPS approved, then discard the seed source.
+         * This scenerio can happen when both the default and FIPS providers are
+         * active - the seed source only exists in the default provider, but the
+         * primary may be fetched from the FIPS provider. When only the FIPS
+         * provider is active, the primary is seeded with OS entropy.
+         */
+        int fips = 0;
+        *p++ = OSSL_PARAM_construct_int(UBUNTU_OSSL_DRBG_PARAM_FIPS_APPROVED,
+                                        &fips);
+        *p++ = OSSL_PARAM_construct_end();
+        if (!EVP_RAND_get_params(rand, params)) {
+            EVP_RAND_free(rand);
+            ERR_raise(ERR_LIB_RAND, RAND_R_UNABLE_TO_CREATE_DRBG);
+            return NULL;
+        }
+        if (fips)
+            parent = NULL;
+    }
+#endif
+
     ctx = EVP_RAND_CTX_new(rand, parent);
     EVP_RAND_free(rand);
     if (ctx == NULL) {
@@ -581,6 +652,7 @@ static EVP_RAND_CTX *rand_new_drbg(OSSL_LIB_CTX *libctx, EVP_RAND_CTX *parent,
      * Rather than trying to decode the DRBG settings, just pass them through
      * and rely on the other end to ignore those it doesn't care about.
      */
+    p = params;
     cipher = dgbl->rng_cipher != NULL ? dgbl->rng_cipher : "AES-256-CTR";
     *p++ = OSSL_PARAM_construct_utf8_string(OSSL_DRBG_PARAM_CIPHER,
                                             cipher, 0);
@@ -645,7 +717,7 @@ EVP_RAND_CTX *RAND_get0_primary(OSSL_LIB_CTX *ctx)
 
     ret = dgbl->primary = rand_new_drbg(ctx, dgbl->seed,
                                         PRIMARY_RESEED_INTERVAL,
-                                        PRIMARY_RESEED_TIME_INTERVAL);
+                                        PRIMARY_RESEED_TIME_INTERVAL, 1);
     /*
     * The primary DRBG may be shared between multiple threads so we must
     * enable locking.
@@ -687,7 +759,7 @@ EVP_RAND_CTX *RAND_get0_public(OSSL_LIB_CTX *ctx)
                 && !ossl_init_thread_start(NULL, ctx, rand_delete_thread_state))
             return NULL;
         rand = rand_new_drbg(ctx, primary, SECONDARY_RESEED_INTERVAL,
-                             SECONDARY_RESEED_TIME_INTERVAL);
+                             SECONDARY_RESEED_TIME_INTERVAL, 0);
         CRYPTO_THREAD_set_local(&dgbl->public, rand);
     }
     return rand;
@@ -720,7 +792,7 @@ EVP_RAND_CTX *RAND_get0_private(OSSL_LIB_CTX *ctx)
                 && !ossl_init_thread_start(NULL, ctx, rand_delete_thread_state))
             return NULL;
         rand = rand_new_drbg(ctx, primary, SECONDARY_RESEED_INTERVAL,
-                             SECONDARY_RESEED_TIME_INTERVAL);
+                             SECONDARY_RESEED_TIME_INTERVAL, 0);
         CRYPTO_THREAD_set_local(&dgbl->private, rand);
     }
     return rand;

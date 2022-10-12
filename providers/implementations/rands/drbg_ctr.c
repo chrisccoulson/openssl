@@ -581,7 +581,7 @@ err:
     EVP_CIPHER_CTX_free(ctr->ctx_ecb);
     EVP_CIPHER_CTX_free(ctr->ctx_ctr);
     ctr->ctx_ecb = ctr->ctx_ctr = NULL;
-    return 0;    
+    return 0;
 }
 
 static int drbg_ctr_new(PROV_DRBG *drbg)
@@ -751,5 +751,10 @@ const OSSL_DISPATCH ossl_drbg_ctr_functions[] = {
       (void(*)(void))drbg_ctr_verify_zeroization },
     { OSSL_FUNC_RAND_GET_SEED, (void(*)(void))ossl_drbg_get_seed },
     { OSSL_FUNC_RAND_CLEAR_SEED, (void(*)(void))ossl_drbg_clear_seed },
+#ifdef FIPS_MODULE
+    { OSSL_FUNC_RAND_GETTABLE_PARAMS,
+        (void(*)(void))ossl_drbg_gettable_params },
+    { OSSL_FUNC_RAND_GET_PARAMS, (void(*)(void))ossl_drbg_get_params },
+#endif
     { 0, NULL }
 };

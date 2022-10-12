@@ -1383,6 +1383,73 @@ static int test_raw_sign_and_verify(int n)
     return ok;
 }
 
+static int test_test_rng(void)
+{
+    EVP_RAND *test_rand = NULL, *rand = NULL;
+    EVP_RAND_CTX *test_ctx = NULL, *ctx = NULL;
+    unsigned char entropyin[32] = {0};
+    unsigned char buf[32];
+    char cipher[] = "AES-128-CTR";
+    int strength = 128;
+    OSSL_PARAM params[4], *p = params;
+    int ok = 0;
+
+    if (!TEST_ptr(test_rand = EVP_RAND_fetch(NULL, "TEST-RAND", NULL)))
+        goto err;
+    if (!TEST_ptr(test_ctx = EVP_RAND_CTX_new(test_rand, NULL)))
+        goto err;
+
+    *p++ = OSSL_PARAM_construct_octet_string(OSSL_RAND_PARAM_TEST_ENTROPY,
+                                             entropyin, sizeof(entropyin));
+    *p++ = OSSL_PARAM_construct_octet_string(OSSL_RAND_PARAM_TEST_NONCE,
+                                             entropyin, sizeof(entropyin));
+    *p++ = OSSL_PARAM_construct_int(OSSL_RAND_PARAM_STRENGTH, &strength);
+    *p++ = OSSL_PARAM_construct_end();
+
+    if (!TEST_true(EVP_RAND_CTX_set_params(test_ctx, params)))
+        goto err;
+
+    if (!test_unapproved(0))
+        goto err;
+
+    if (!TEST_true(EVP_RAND_generate(test_ctx, buf, sizeof(buf), 0, 0, NULL, 0)))
+        goto err;
+
+    if (!test_unapproved(1))
+        goto err;
+    if (!test_unapproved(0))
+        goto err;
+
+    if (!TEST_ptr(rand = EVP_RAND_fetch(NULL, "CTR-DRBG", NULL)))
+        goto err;
+    if (!TEST_ptr(ctx = EVP_RAND_CTX_new(rand, test_ctx)))
+        goto err;
+
+    if (!test_unapproved(0))
+        goto err;
+
+    p = params;
+    *p++ = OSSL_PARAM_construct_utf8_string(OSSL_DRBG_PARAM_CIPHER, cipher,
+                                            sizeof(cipher) - 1);
+    *p++ = OSSL_PARAM_construct_end();
+    if (!TEST_true(EVP_RAND_instantiate(ctx, 0, 0, NULL, 0, params)))
+        goto err;
+
+    if (!test_unapproved(1))
+        goto err;
+    if (!test_unapproved(0))
+        goto err;
+
+    ok = 1;
+ err:
+    EVP_RAND_CTX_free(ctx);
+    EVP_RAND_free(rand);
+    EVP_RAND_CTX_free(test_ctx);
+    EVP_RAND_free(test_rand);
+
+    return ok;
+}
+
 typedef enum OPTION_choice {
     OPT_ERR = -1,
     OPT_EOF = 0,
@@ -1443,6 +1510,7 @@ int setup_tests(void)
     ADD_ALL_TESTS(test_paramgen, OSSL_NELEM(paramgen_data));
     ADD_ALL_TESTS(test_raw_sign_and_verify,
                   OSSL_NELEM(raw_sign_and_verify_data));
+    ADD_TEST(test_test_rng);
 
     return 1;
 }

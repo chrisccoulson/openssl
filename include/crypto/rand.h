@@ -125,4 +125,6 @@ void ossl_rand_cleanup_nonce(ossl_unused OSSL_CORE_HANDLE *handle,
 size_t ossl_pool_acquire_entropy(RAND_POOL *pool);
 int ossl_pool_add_nonce_data(RAND_POOL *pool);
 
+#define UBUNTU_OSSL_DRBG_PARAM_FIPS_APPROVED "ubuntu.fips_approved"
+
 #endif
