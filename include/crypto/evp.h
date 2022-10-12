@@ -841,6 +841,8 @@ void *evp_keymgmt_dup(const EVP_KEYMGMT *keymgmt,
 EVP_KEYMGMT *evp_keymgmt_fetch_from_prov(OSSL_PROVIDER *prov,
                                          const char *name,
                                          const char *properties);
+EVP_RAND *evp_rand_fetch_from_prov(OSSL_PROVIDER *prov, const char *algorithm,
+                                   const char *properties);
 
 /* Pulling defines out of C source files */
 

@@ -19,6 +19,7 @@
 #include "prov/provider_ctx.h"
 #include "prov/provider_util.h"
 #include "prov/implementations.h"
+#include "prov/securitycheck.h"
 
 static OSSL_FUNC_rand_newctx_fn test_rng_new;
 static OSSL_FUNC_rand_freectx_fn test_rng_free;
@@ -104,6 +105,9 @@ static int test_rng_generate(void *vtest, unsigned char *out, size_t outlen,
                              const unsigned char *adin, size_t adin_len)
 {
     PROV_TEST_RNG *t = (PROV_TEST_RNG *)vtest;
+
+    if (!ossl_record_fips_unapproved_usage(PROV_LIBCTX_OF(t->provctx)))
+        return 0;
 
     if (strength > t->strength || t->entropy_len - t->entropy_pos < outlen)
         return 0;
@@ -234,6 +238,9 @@ static size_t test_rng_get_seed(void *vtest, unsigned char **pout,
                                 ossl_unused size_t adin_len)
 {
     PROV_TEST_RNG *t = (PROV_TEST_RNG *)vtest;
+
+    if (!ossl_record_fips_unapproved_usage(PROV_LIBCTX_OF(t->provctx)))
+        return 0;
 
     *pout = t->entropy;
     return  t->entropy_len > max_len ? max_len : t->entropy_len;

@@ -7,6 +7,11 @@
  * https://www.openssl.org/source/license.html
  */
 
+#ifdef FIPS_MODULE
+#define _GNU_SOURCE
+#include <dlfcn.h>
+#endif
+
 #include <string.h>
 #include <openssl/crypto.h>
 #include <openssl/err.h>
@@ -21,6 +26,7 @@
 #include "crypto/rand_pool.h"
 #include "prov/provider_ctx.h"
 #include "prov/providercommon.h"
+#include "prov/securitycheck.h"
 
 /*
  * Support framework for NIST SP 800-90A DRBG
@@ -365,11 +371,11 @@ int ossl_prov_drbg_instantiate(PROV_DRBG *drbg, unsigned int strength,
     unsigned char *nonce = NULL, *entropy = NULL;
     size_t noncelen = 0, entropylen = 0;
     size_t min_entropy, min_entropylen, max_entropylen;
-
     if (strength > drbg->strength) {
         ERR_raise(ERR_LIB_PROV, PROV_R_INSUFFICIENT_DRBG_STRENGTH);
         goto end;
     }
+
     min_entropy = drbg->strength;
     min_entropylen = drbg->min_entropylen;
     max_entropylen = drbg->max_entropylen;
@@ -430,7 +436,7 @@ int ossl_prov_drbg_instantiate(PROV_DRBG *drbg, unsigned int strength,
         }
 #ifndef PROV_RAND_GET_RANDOM_NONCE
         else { /* parent == NULL */
-            noncelen = prov_drbg_get_nonce(drbg, &nonce, drbg->min_noncelen, 
+            noncelen = prov_drbg_get_nonce(drbg, &nonce, drbg->min_noncelen,
                                            drbg->max_noncelen);
             if (noncelen < drbg->min_noncelen
                     || noncelen > drbg->max_noncelen) {
@@ -778,6 +784,9 @@ PROV_DRBG *ossl_rand_drbg_new
     PROV_DRBG *drbg;
     unsigned int p_str;
     const OSSL_DISPATCH *pfunc;
+#ifdef FIPS_MODULE
+    Dl_info this_info, parent_info;
+#endif
 
     if (!ossl_prov_is_running())
         return NULL;
@@ -824,6 +833,20 @@ PROV_DRBG *ossl_rand_drbg_new
 
     if (!dnew(drbg))
         goto err;
+
+#ifdef FIPS_MODULE
+    if (drbg->parent_get_seed != NULL) {
+        /*
+         * When chaining DRBGs, ensure that this DRBG is only seeded from an
+         * approved DRBG within the boundary of this module.
+         */
+        if (dladdr((void *)(uintptr_t)ossl_drbg_get_seed, &this_info) == 0
+            || dladdr((void *)(uintptr_t)drbg->parent_get_seed, &parent_info) == 0)
+            goto err;
+        if (this_info.dli_fbase != parent_info.dli_fbase)
+            goto err;
+    }
+#endif
 
     if (parent != NULL) {
         if (!get_parent_strength(drbg, &p_str))
@@ -932,3 +955,25 @@ int ossl_drbg_set_ctx_params(PROV_DRBG *drbg, const OSSL_PARAM params[])
         return 0;
     return 1;
 }
+
+#ifdef FIPS_MODULE
+const OSSL_PARAM *ossl_drbg_gettable_params(ossl_unused void *vprovctx)
+{
+    static const OSSL_PARAM known_gettable_params[] = {
+        OSSL_PARAM_int(UBUNTU_OSSL_DRBG_PARAM_RESTRICTED_RESEED, 0),
+        OSSL_PARAM_END
+    };
+    return known_gettable_params;
+}
+
+int ossl_drbg_get_params(OSSL_PARAM params[])
+{
+    OSSL_PARAM *p;
+
+    p = OSSL_PARAM_locate(params, UBUNTU_OSSL_DRBG_PARAM_RESTRICTED_RESEED);
+    if (p != NULL && !OSSL_PARAM_set_int(p, 1))
+        return 0;
+
+    return 1;
+}
+#endif

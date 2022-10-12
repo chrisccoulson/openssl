@@ -210,6 +210,9 @@ int ossl_prov_drbg_generate(PROV_DRBG *drbg, unsigned char *out, size_t outlen,
 OSSL_FUNC_rand_get_seed_fn ossl_drbg_get_seed;
 OSSL_FUNC_rand_clear_seed_fn ossl_drbg_clear_seed;
 
+OSSL_FUNC_rand_gettable_params_fn ossl_drbg_gettable_params;
+OSSL_FUNC_rand_get_params_fn ossl_drbg_get_params;
+
 /* Verify that an array of numeric values is all zero */
 #define PROV_DRBG_VERYIFY_ZEROIZATION(v)    \
     {                                       \
