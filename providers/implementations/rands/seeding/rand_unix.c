@@ -27,6 +27,9 @@
 #  include <sys/shm.h>
 #  include <sys/utsname.h>
 # endif
+# ifdef FIPS_MODULE
+#  include <sys/random.h>
+# endif
 #endif
 #if (defined(__FreeBSD__) || defined(__NetBSD__)) && !defined(OPENSSL_SYS_UEFI)
 # include <sys/types.h>
@@ -205,7 +208,9 @@ void ossl_rand_pool_keep_random_devices_open(int keep)
 #    error "OS seeding requires DEVRANDOM to be configured"
 #   endif
 #   define OPENSSL_RAND_SEED_GETRANDOM
-#   define OPENSSL_RAND_SEED_DEVRANDOM
+#   if !defined(FIPS_MODULE)
+#    define OPENSSL_RAND_SEED_DEVRANDOM
+#   endif
 #  endif
 
 #  if defined(OPENSSL_RAND_SEED_LIBRANDOM)
@@ -356,7 +361,7 @@ static ssize_t syscall_random(void *buf, size_t buflen)
      * Note: Sometimes getentropy() can be provided but not implemented
      * internally. So we need to check errno for ENOSYS
      */
-#  if !defined(__DragonFly__) && !defined(__NetBSD__)
+#  if !defined(__DragonFly__) && !defined(__NetBSD__) && !defined(FIPS_MODULE)
 #    if defined(__GNUC__) && __GNUC__>=2 && defined(__ELF__) && !defined(__hpux)
     extern int getentropy(void *buffer, size_t length) __attribute__((weak));
 
@@ -392,7 +397,17 @@ static ssize_t syscall_random(void *buf, size_t buflen)
 
     /* Linux supports this since version 3.17 */
 #  if defined(__linux) && defined(__NR_getrandom)
+#   if !defined(FIPS_MODULE)
     return syscall(__NR_getrandom, buf, buflen, 0);
+#   else
+#    if !defined(GRND_RESEED)
+#     define GRND_RESEED 0x0020
+#    endif
+    ssize_t ret = syscall(__NR_getrandom, buf, buflen, GRND_RESEED);
+    if (ret < 0 && errno == EINVAL)
+        ret = syscall(__NR_getrandom, buf, buflen, 0);
+    return ret;
+#   endif
 #  elif (defined(__FreeBSD__) || defined(__NetBSD__)) && defined(KERN_ARND)
     return sysctl_random(buf, buflen);
 #  elif (defined(__DragonFly__)  && __DragonFly_version >= 500700) \
@@ -417,7 +432,7 @@ static struct random_device {
 static int keep_random_devices_open = 1;
 
 #   if defined(__linux) && defined(DEVRANDOM_WAIT) \
-       && defined(OPENSSL_RAND_SEED_GETRANDOM)
+       && defined(OPENSSL_RAND_SEED_DEVRANDOM)
 static void *shm_addr;
 
 static void cleanup_shm(void)
@@ -495,7 +510,7 @@ static int wait_random_seeded(void)
     }
     return seeded;
 }
-#   else /* defined __linux && DEVRANDOM_WAIT && OPENSSL_RAND_SEED_GETRANDOM */
+#   else /* defined __linux && DEVRANDOM_WAIT && OPENSSL_RAND_SEED_DEVRANDOM */
 static int wait_random_seeded(void)
 {
     return 1;
