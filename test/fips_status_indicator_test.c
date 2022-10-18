@@ -1461,6 +1461,62 @@ static int test_test_rng(void)
     return ok;
 }
 
+typedef struct RAND_DATA_st {
+    char *algorithm;
+    char *digest;
+    int unapproved;
+} RAND_DATA;
+
+static const RAND_DATA rand_data[] = {
+    { "HASH-DRBG", SN_sha3_256, 1},
+    { "HASH-DRBG", SN_sha256, 0},
+    { "HMAC-DRBG", SN_sha3_256, 1},
+    { "HMAC-DRBG", SN_sha256, 0},
+};
+
+static int test_rand(int n)
+{
+    const RAND_DATA *data = &rand_data[n];
+    char *algorithm = data->algorithm;
+    char *digest = data->digest;
+    int unapproved = data->unapproved;
+    EVP_RAND *rand = NULL;
+    EVP_RAND_CTX *ctx = NULL;
+    unsigned char buf[32];
+    OSSL_PARAM params[3] = { OSSL_PARAM_END, OSSL_PARAM_END, OSSL_PARAM_END };
+    int ok = 0;
+
+    if (!TEST_ptr(rand = EVP_RAND_fetch(NULL, algorithm, NULL)))
+        goto err;
+    if (!TEST_ptr(ctx = EVP_RAND_CTX_new(rand, NULL)))
+        goto err;
+
+    params[0] = OSSL_PARAM_construct_utf8_string(OSSL_DRBG_PARAM_DIGEST, digest,
+                                                 0);
+    params[1] = OSSL_PARAM_construct_utf8_string(OSSL_DRBG_PARAM_MAC, SN_hmac,
+                                                 0);
+    if (!TEST_true(EVP_RAND_instantiate(ctx, 0, 0, NULL, 0, params)))
+        goto err;
+
+    if (!TEST_true(test_unapproved(0)))
+        goto err;
+
+    if (!TEST_true(EVP_RAND_generate(ctx, buf, sizeof(buf), 0, 0, NULL, 0)))
+        goto err;
+
+    if (unapproved == 1 && !test_unapproved(1))
+        goto err;
+    if (!TEST_true(test_unapproved(0)))
+        goto err;
+
+    ok = 1;
+ err:
+    EVP_RAND_CTX_free(ctx);
+    EVP_RAND_free(rand);
+
+    return ok;
+}
+
 typedef struct GCM_DATA_st {
     const unsigned char *iv;
     int unapproved;
@@ -1573,6 +1629,7 @@ int setup_tests(void)
     ADD_ALL_TESTS(test_raw_sign_and_verify,
                   OSSL_NELEM(raw_sign_and_verify_data));
     ADD_TEST(test_test_rng);
+    ADD_ALL_TESTS(test_rand, OSSL_NELEM(rand_data));
     ADD_ALL_TESTS(test_gcm, OSSL_NELEM(gcm_data));
 
     return 1;
