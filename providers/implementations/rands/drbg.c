@@ -454,6 +454,7 @@ int ossl_prov_drbg_instantiate(PROV_DRBG *drbg, unsigned int strength,
             drbg->reseed_next_counter = 1;
     }
 
+    min_entropy += drbg->strength / 2;
     entropylen = get_entropy(drbg, &entropy, min_entropy,
                              min_entropylen, max_entropylen,
                              prediction_resistance);
