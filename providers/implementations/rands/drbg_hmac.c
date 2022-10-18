@@ -18,6 +18,7 @@
 #include "prov/providercommon.h"
 #include "prov/implementations.h"
 #include "prov/provider_ctx.h"
+#include "prov/securitycheck.h"
 #include "drbg_local.h"
 
 static OSSL_FUNC_rand_newctx_fn drbg_hmac_new_wrapper;
@@ -242,6 +243,11 @@ static int drbg_hmac_generate_wrapper
      int prediction_resistance, const unsigned char *adin, size_t adin_len)
 {
     PROV_DRBG *drbg = (PROV_DRBG *)vdrbg;
+    PROV_DRBG_HMAC *hmac = (PROV_DRBG_HMAC *)drbg->data;
+
+    ossl_record_fips_unapproved_digest_usage(PROV_LIBCTX_OF(drbg->provctx),
+                                             ossl_prov_digest_md(&hmac->digest),
+                                             SC_DRBG_DIGESTS);
 
     return ossl_prov_drbg_generate(drbg, out, outlen, strength,
                                    prediction_resistance, adin, adin_len);
@@ -369,6 +375,11 @@ static int drbg_hmac_set_ctx_params(void *vctx, const OSSL_PARAM params[])
      * digests.
      */
     md = ossl_prov_digest_md(&hmac->digest);
+    if (!ossl_digest_is_allowed_ex(libctx, md, SC_DRBG_DIGESTS)) {
+        ERR_raise(ERR_LIB_PROV, PROV_R_DIGEST_NOT_ALLOWED);
+        ossl_prov_digest_reset(&hmac->digest);
+        return 0;
+    }
     if (md != NULL && (EVP_MD_get_flags(md) & EVP_MD_FLAG_XOF) != 0) {
         ERR_raise(ERR_LIB_PROV, PROV_R_XOF_DIGESTS_NOT_ALLOWED);
         return 0;

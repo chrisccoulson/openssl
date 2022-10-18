@@ -321,6 +321,11 @@ static int digest_is_allowed(const EVP_MD *md, int option)
         return mdnid == NID_sha256
             || mdnid == NID_sha384
             || mdnid == NID_sha512;
+    case SC_DRBG_DIGESTS:
+        return mdnid != NID_sha3_224
+            && mdnid != NID_sha3_256
+            && mdnid != NID_sha3_384
+            && mdnid != NID_sha3_512;
     default:
         return 0;
     }

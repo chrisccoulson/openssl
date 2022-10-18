@@ -15,6 +15,7 @@
 #define SC_TLS1_3_KDF_DIGESTS   3
 #define SC_X963_KDF_DIGESTS     4
 #define SC_TLS1_PRF_DIGESTS     5
+#define SC_DRBG_DIGESTS         6
 
 /* Functions that are common */
 int ossl_rsa_check_key(OSSL_LIB_CTX *ctx, const RSA *rsa, int operation);

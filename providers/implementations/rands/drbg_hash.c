@@ -331,7 +331,7 @@ static int drbg_hash_generate(PROV_DRBG *drbg,
 
     ossl_record_fips_unapproved_digest_usage(PROV_LIBCTX_OF(drbg->provctx),
                                              ossl_prov_digest_md(&hash->digest),
-                                             SC_ALLOW_ALL_DIGESTS);
+                                             SC_DRBG_DIGESTS);
 
     counter[0] = (unsigned char)((reseed_counter >> 24) & 0xff);
     counter[1] = (unsigned char)((reseed_counter >> 16) & 0xff);
@@ -473,7 +473,7 @@ static int drbg_hash_set_ctx_params(void *vctx, const OSSL_PARAM params[])
 
     md = ossl_prov_digest_md(&hash->digest);
     if (md != NULL) {
-        if (!ossl_digest_is_allowed(libctx, md)) {
+        if (!ossl_digest_is_allowed_ex(libctx, md, SC_DRBG_DIGESTS)) {
             ERR_raise(ERR_LIB_PROV, PROV_R_DIGEST_NOT_ALLOWED);
             ossl_prov_digest_reset(&hash->digest);
             return 0;
