@@ -223,7 +223,7 @@
 #define PROV_NAMES_SHAKE_256 "SHAKE-256:SHAKE256:2.16.840.1.101.3.4.2.12"
 
 /*
- * KECCAK-KMAC-128 and KECCAK-KMAC-256 as hashes are mostly useful for 
+ * KECCAK-KMAC-128 and KECCAK-KMAC-256 as hashes are mostly useful for
  * KMAC128 and KMAC256.
  */
 #define PROV_NAMES_KECCAK_KMAC_128 "KECCAK-KMAC-128:KECCAK-KMAC128"
@@ -325,3 +325,5 @@
 #define PROV_DESCS_RSA_PSS "OpenSSL RSA-PSS implementation"
 #define PROV_NAMES_SM2 "SM2:1.2.156.10197.1.301"
 #define PROV_DESCS_SM2 "OpenSSL SM2 implementation"
+
+#define PROV_SIGNATURE_PARAM_ECDSA_KAT_K "ubuntu.kat_k"

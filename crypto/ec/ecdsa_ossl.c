@@ -71,7 +71,7 @@ int ossl_ecdsa_sign(int type, const unsigned char *dgst, int dlen,
     return 1;
 }
 
-static int ecdsa_sign_setup(EC_KEY *eckey, BN_CTX *ctx_in,
+static int ecdsa_sign_setup(EC_KEY *eckey, BN_CTX *ctx_in, BIGNUM *k_in,
                             BIGNUM **kinvp, BIGNUM **rp,
                             const unsigned char *dgst, int dlen)
 {
@@ -126,21 +126,31 @@ static int ecdsa_sign_setup(EC_KEY *eckey, BN_CTX *ctx_in,
         goto err;
 
     do {
-        /* get random k */
-        do {
-            if (dgst != NULL) {
-                if (!BN_generate_dsa_nonce(k, order, priv_key,
-                                           dgst, dlen, ctx)) {
-                    ERR_raise(ERR_LIB_EC, EC_R_RANDOM_NUMBER_GENERATION_FAILED);
-                    goto err;
+        if (k_in != NULL) {
+#ifdef FIPS_MODULE
+            if (BN_copy(k, k_in) == NULL)
+                goto err;
+#else
+            ERR_raise(ERR_LIB_EC, ERR_R_INTERNAL_ERROR);
+            goto err;
+#endif
+        } else {
+            /* get random k */
+            do {
+                if (dgst != NULL) {
+                    if (!BN_generate_dsa_nonce(k, order, priv_key,
+                                               dgst, dlen, ctx)) {
+                        ERR_raise(ERR_LIB_EC, EC_R_RANDOM_NUMBER_GENERATION_FAILED);
+                        goto err;
+                    }
+                } else {
+                    if (!BN_priv_rand_range_ex(k, order, 0, ctx)) {
+                        ERR_raise(ERR_LIB_EC, EC_R_RANDOM_NUMBER_GENERATION_FAILED);
+                        goto err;
+                    }
                 }
-            } else {
-                if (!BN_priv_rand_range_ex(k, order, 0, ctx)) {
-                    ERR_raise(ERR_LIB_EC, EC_R_RANDOM_NUMBER_GENERATION_FAILED);
-                    goto err;
-                }
-            }
-        } while (BN_is_zero(k));
+            } while (BN_is_zero(k));
+        }
 
         /* compute r the x-coordinate of generator * k */
         if (!EC_POINT_mul(group, tmp_point, k, NULL, NULL, ctx)) {
@@ -187,8 +197,19 @@ static int ecdsa_sign_setup(EC_KEY *eckey, BN_CTX *ctx_in,
 int ossl_ecdsa_simple_sign_setup(EC_KEY *eckey, BN_CTX *ctx_in, BIGNUM **kinvp,
                                  BIGNUM **rp)
 {
-    return ecdsa_sign_setup(eckey, ctx_in, kinvp, rp, NULL, 0);
+    return ecdsa_sign_setup(eckey, ctx_in, NULL, kinvp, rp, NULL, 0);
 }
+
+#ifdef FIPS_MODULE
+int ossl_ecdsa_simple_sign_setup_for_kat(EC_KEY *eckey, BIGNUM *k,
+                                         BIGNUM **kinvp, BIGNUM **rp)
+{
+    if (eckey->group->meth->ecdsa_sign_setup != ossl_ecdsa_simple_sign_setup)
+        return 0;
+
+    return ecdsa_sign_setup(eckey, NULL, k, kinvp, rp, NULL, 0);
+}
+#endif
 
 ECDSA_SIG *ossl_ecdsa_simple_sign_sig(const unsigned char *dgst, int dgst_len,
                                       const BIGNUM *in_kinv, const BIGNUM *in_r,
@@ -256,7 +277,7 @@ ECDSA_SIG *ossl_ecdsa_simple_sign_sig(const unsigned char *dgst, int dgst_len,
     }
     do {
         if (in_kinv == NULL || in_r == NULL) {
-            if (!ecdsa_sign_setup(eckey, ctx, &kinv, &ret->r, dgst, dgst_len)) {
+            if (!ecdsa_sign_setup(eckey, ctx, NULL, &kinv, &ret->r, dgst, dgst_len)) {
                 ERR_raise(ERR_LIB_EC, ERR_R_ECDSA_LIB);
                 goto err;
             }
