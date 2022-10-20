@@ -450,3 +450,8 @@ int ossl_prov_is_running(void)
     CRYPTO_THREAD_unlock(fips_state_lock);
     return res;
 }
+
+int ossl_prov_self_test_running_on_this_thread(void)
+{
+    return SELF_TEST_running_on_this_thread();
+}

@@ -30,6 +30,7 @@
 #include "prov/provider_ctx.h"
 #include "prov/securitycheck.h"
 #include "crypto/ec.h"
+#include "crypto/rand.h"
 #include "prov/der_ec.h"
 
 static OSSL_FUNC_signature_newctx_fn ecdsa_newctx;
@@ -101,6 +102,9 @@ typedef struct {
      * valid - but for this mode of operation it forces a failure instead.
      */
     unsigned int kattest;
+#endif
+#if defined(FIPS_MODULE)
+    BIGNUM *kat_k;
 #endif
 } PROV_ECDSA_CTX;
 
@@ -186,6 +190,13 @@ static int ecdsa_sign_int(PROV_ECDSA_CTX *ctx, unsigned char *sig,
 
 #if !defined(OPENSSL_NO_ACVP_TESTS)
     if (ctx->kattest && !ECDSA_sign_setup(ctx->ec, NULL, &ctx->kinv, &ctx->r))
+        return 0;
+#endif
+#if defined(FIPS_MODULE)
+    if (ossl_prov_self_test_running_on_this_thread()
+        && ctx->kat_k != NULL
+        && !ossl_ecdsa_simple_sign_setup_for_kat(ctx->ec, ctx->kat_k,
+                                                 &ctx->kinv, &ctx->r))
         return 0;
 #endif
 
@@ -417,6 +428,9 @@ static void ecdsa_freectx(void *vctx)
     EC_KEY_free(ctx->ec);
     BN_clear_free(ctx->kinv);
     BN_clear_free(ctx->r);
+#if defined(FIPS_MODULE)
+    BN_clear_free(ctx->kat_k);
+#endif
     OPENSSL_free(ctx);
 }
 
@@ -437,6 +451,9 @@ static void *ecdsa_dupctx(void *vctx)
     dstctx->md = NULL;
     dstctx->mdctx = NULL;
     dstctx->propq = NULL;
+#if defined(FIPS_MDOULE)
+    dstctx->kat_k = NULL;
+#endif
 
     if (srcctx->ec != NULL && !EC_KEY_up_ref(srcctx->ec))
         goto err;
@@ -461,6 +478,12 @@ static void *ecdsa_dupctx(void *vctx)
         if (dstctx->propq == NULL)
             goto err;
     }
+
+#if defined(FIPS_MODULE)
+    if (srcctx->kat_k != NULL
+        && ((dstctx->kat_k = BN_dup(srcctx->kat_k)) == NULL))
+        goto err;
+#endif
 
     return dstctx;
  err:
@@ -547,6 +570,25 @@ static int ecdsa_set_ctx_params(void *vctx, const OSSL_PARAM params[])
             return 0;
         ctx->mdsize = mdsize;
     }
+
+#if defined(FIPS_MODULE)
+    p = OSSL_PARAM_locate_const(params, "ubuntu.kat_k");
+    if (p != NULL) {
+        void *k = NULL;
+        size_t klen;
+
+        BN_clear_free(ctx->kat_k);
+        ctx->kat_k = NULL;
+
+        if (!OSSL_PARAM_get_octet_string(p, &k, 0, &klen) || k == NULL)
+            return 0;
+
+        ctx->kat_k = BN_bin2bn(k, klen, NULL);
+        OPENSSL_free(k);
+        if (ctx->kat_k == NULL)
+            return 0;
+    }
+#endif
 
     return 1;
 }

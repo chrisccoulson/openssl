@@ -20,3 +20,8 @@ int ossl_prov_is_running(void)
 {
     return 1;
 }
+
+int ossl_prov_self_test_running_on_this_thread(void)
+{
+    return 0;
+}

@@ -468,6 +468,10 @@ static int self_test_sign(const ST_KAT_SIGN *t,
         goto err;
     params = OSSL_PARAM_BLD_to_param(bld);
 
+    if (!add_params(bld, t->sign_params, bnctx))
+        goto err;
+    params_sig = OSSL_PARAM_BLD_to_param(bld);
+
     /* Create a EVP_PKEY_CTX to load the DSA key into */
     kctx = EVP_PKEY_CTX_new_from_name(libctx, t->algorithm, "");
     if (kctx == NULL || params == NULL)
@@ -482,7 +486,7 @@ static int self_test_sign(const ST_KAT_SIGN *t,
         goto err;
 
     if (EVP_DigestSignInit_ex(sctx, NULL, t->mdalgorithm, libctx, NULL, pkey,
-                              NULL) <= 0
+                              params_sig) <= 0
         || EVP_DigestSignUpdate(sctx, msg, strlen(msg)) <= 0
         || EVP_DigestSignFinal(sctx, sig, &siglen) <= 0
         || EVP_DigestVerifyInit_ex(sctx, NULL, t->mdalgorithm, libctx, NULL, pkey,
