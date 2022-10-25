@@ -36,11 +36,17 @@ void openssl_add_all_digests_int(void)
     EVP_add_digest_alias(SN_ripemd160, "rmd160");
 #endif
     EVP_add_digest(EVP_sha224());
+    EVP_add_digest_alias(SN_sha224, "SHA2-224");
     EVP_add_digest(EVP_sha256());
+    EVP_add_digest_alias(SN_sha256, "SHA2-256");
     EVP_add_digest(EVP_sha384());
+    EVP_add_digest_alias(SN_sha384, "SHA2-384");
     EVP_add_digest(EVP_sha512());
+    EVP_add_digest_alias(SN_sha512, "SHA2-512");
     EVP_add_digest(EVP_sha512_224());
+    EVP_add_digest_alias(SN_sha512_224, "SHA2-512/224");
     EVP_add_digest(EVP_sha512_256());
+    EVP_add_digest_alias(SN_sha512_256, "SHA2-512/256");
 #ifndef OPENSSL_NO_WHIRLPOOL
     EVP_add_digest(EVP_whirlpool());
 #endif
