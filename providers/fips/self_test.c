@@ -267,10 +267,7 @@ static int set_self_test_running_on_this_thread(int running)
 int SELF_TEST_post(SELF_TEST_POST_PARAMS *st, int on_demand_test)
 {
     int ok = 0;
-    int kats_already_passed = 0;
-    long checksum_len;
-    OSSL_CORE_BIO *bio_module = NULL, *bio_indicator = NULL;
-    unsigned char *indicator_checksum = NULL;
+    OSSL_CORE_BIO *bio_module = NULL;
     int loclstate;
     OSSL_SELF_TEST *ev = NULL;
     Dl_info dl_info;
@@ -328,48 +325,12 @@ int SELF_TEST_post(SELF_TEST_POST_PARAMS *st, int on_demand_test)
 
     bio_module = (*st->bio_new_file_cb)(st->module_filename, "rb");
 
-    /* This will be NULL during installation - so the self test KATS will run */
-    if (st->indicator_data != NULL) {
-        /*
-         * If the kats have already passed indicator is set - then check the
-         * integrity of the indicator.
-         */
-        if (st->indicator_checksum_data == NULL) {
-            ERR_raise(ERR_LIB_PROV, PROV_R_MISSING_CONFIG_DATA);
-            goto end;
-        }
-        indicator_checksum = OPENSSL_hexstr2buf(st->indicator_checksum_data,
-                                                &checksum_len);
-        if (indicator_checksum == NULL) {
-            ERR_raise(ERR_LIB_PROV, PROV_R_INVALID_CONFIG_DATA);
-            goto end;
-        }
-
-        bio_indicator =
-            (*st->bio_new_buffer_cb)(st->indicator_data,
-                                     strlen(st->indicator_data));
-        if (bio_indicator == NULL
-                || !verify_integrity(bio_indicator, st->bio_read_ex_cb,
-                                     indicator_checksum, checksum_len, 0, 0,
-                                     st->libctx, ev,
-                                     OSSL_SELF_TEST_TYPE_INSTALL_INTEGRITY)) {
-            ERR_raise(ERR_LIB_PROV, PROV_R_INDICATOR_INTEGRITY_FAILURE);
-            goto end;
-        } else {
-            kats_already_passed = 1;
-        }
-    }
-
     /*
      * Only runs the KAT's during installation OR on_demand().
-     * NOTE: If the installation option 'self_test_onload' is chosen then this
-     * path will always be run, since kats_already_passed will always be 0.
      */
-    if (on_demand_test || kats_already_passed == 0) {
-        if (!SELF_TEST_kats(ev, st->libctx)) {
-            ERR_raise(ERR_LIB_PROV, PROV_R_SELF_TEST_KAT_FAILURE);
-            goto end;
-        }
+    if (!SELF_TEST_kats(ev, st->libctx)) {
+        ERR_raise(ERR_LIB_PROV, PROV_R_SELF_TEST_KAT_FAILURE);
+        goto end;
     }
 
     if (!dladdr1(module_checksum, &dl_info, (void **)&lm, RTLD_DL_LINKMAP))
@@ -394,12 +355,9 @@ int SELF_TEST_post(SELF_TEST_POST_PARAMS *st, int on_demand_test)
     ok = 1;
 end:
     OSSL_SELF_TEST_free(ev);
-    OPENSSL_free(indicator_checksum);
 
-    if (st != NULL) {
-        (*st->bio_free_cb)(bio_indicator);
+    if (st != NULL)
         (*st->bio_free_cb)(bio_module);
-    }
     if (ok)
         set_fips_state(FIPS_STATE_RUNNING);
     else

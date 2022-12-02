@@ -147,18 +147,6 @@ static int fips_get_params_from_core(FIPS_GLOBAL *fgbl)
             (char **)&fgbl->selftest_params.module_filename,
             sizeof(fgbl->selftest_params.module_filename));
     *p++ = OSSL_PARAM_construct_utf8_ptr(
-            OSSL_PROV_FIPS_PARAM_INSTALL_MAC,
-            (char **)&fgbl->selftest_params.indicator_checksum_data,
-            sizeof(fgbl->selftest_params.indicator_checksum_data));
-    *p++ = OSSL_PARAM_construct_utf8_ptr(
-            OSSL_PROV_FIPS_PARAM_INSTALL_STATUS,
-            (char **)&fgbl->selftest_params.indicator_data,
-            sizeof(fgbl->selftest_params.indicator_data));
-    *p++ = OSSL_PARAM_construct_utf8_ptr(
-            OSSL_PROV_FIPS_PARAM_INSTALL_VERSION,
-            (char **)&fgbl->selftest_params.indicator_version,
-            sizeof(fgbl->selftest_params.indicator_version));
-    *p++ = OSSL_PARAM_construct_utf8_ptr(
             OSSL_PROV_FIPS_PARAM_CONDITIONAL_ERRORS,
             (char **)&fgbl->selftest_params.conditional_error_check,
             sizeof(fgbl->selftest_params.conditional_error_check));
