@@ -16,25 +16,32 @@ GetOptions("key=s"              => \$mac_key,
 my $mac_keylen = length($mac_key);
 
 use Digest::SHA qw(hmac_sha256_hex);
-my $module_size = [ stat($module_name) ]->[7];
 
-open my $fh, "<:raw", $module_name or die "Trying to open $module_name: $!";
-read $fh, my $data, $module_size or die "Trying to read $module_name: $!";
+my $module_mac_name = $module_name.".checksum";
+my $module_name_tmp = $module_name.".tmp";
+
+open my $fh, ">", $module_mac_name or die "Trying to open $module_mac_name: $!";
+truncate $fh, 32;
+close $fh;
+
+my $ret = system("$objcopy", "--update-section", ".module-checksum=$module_mac_name", "$module_name", "$module_name_tmp");
+die "Trying to clear .module-checksum section: exit code $ret" unless $ret == 0;
+
+my $module_size = [ stat($module_name_tmp) ]->[7];
+
+open my $fh, "<:raw", $module_name_tmp or die "Trying to open $module_name_tmp: $!";
+read $fh, my $data, $module_size or die "Trying to read $module_name_tmp: $!";
 close $fh;
 
 my @module_mac = hmac_sha256_hex($data, pack("H$mac_keylen", $mac_key)) =~ m/../g;
 
-my $module_mac_name = $module_name.".checksum";
-
-open my $fh, ">:raw", $module_mac_name or die "Trying to open $module_mac: $!";
+open my $fh, ">:raw", $module_mac_name or die "Trying to open $module_mac_name: $!";
 for (@module_mac) {
     print $fh chr hex($_);
 }
 close $fh;
 
-my $module_name_tmp = $module_name.".tmp";
-
-my $ret = system("$objcopy", "--update-section", ".module-checksum=$module_mac_name", "$module_name", "$module_name_tmp");
+my $ret = system("$objcopy", "--update-section", ".module-checksum=$module_mac_name", "$module_name_tmp");
 die "Trying to update .module-checksum section: exit code $ret" unless $ret == 0;
 
 $dest = $module_name if not $dest;
