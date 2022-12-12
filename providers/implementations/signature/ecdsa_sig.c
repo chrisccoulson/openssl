@@ -358,6 +358,9 @@ int ecdsa_digest_signverify_update(void *vctx, const unsigned char *data,
 {
     PROV_ECDSA_CTX *ctx = (PROV_ECDSA_CTX *)vctx;
 
+    if (!ossl_prov_is_running())
+        return 0;
+
     if (ctx == NULL || ctx->mdctx == NULL)
         return 0;
 

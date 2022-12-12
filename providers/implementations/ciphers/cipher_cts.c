@@ -48,6 +48,7 @@
 
 #include <openssl/core_names.h>
 #include "prov/ciphercommon.h"
+#include "prov/providercommon.h"
 #include "internal/nelem.h"
 #include "cipher_cts.h"
 
@@ -332,6 +333,9 @@ int ossl_cipher_cbc_cts_block_update(void *vctx, unsigned char *out, size_t *out
     PROV_CIPHER_CTX *ctx = (PROV_CIPHER_CTX *)vctx;
     size_t sz = 0;
 
+    if (!ossl_prov_is_running())
+        return 0;
+
     if (inl < CTS_BLOCK_SIZE) /* There must be at least one block for CTS mode */
         return 0;
     if (outsize < inl)
@@ -373,6 +377,8 @@ int ossl_cipher_cbc_cts_block_update(void *vctx, unsigned char *out, size_t *out
 int ossl_cipher_cbc_cts_block_final(void *vctx, unsigned char *out, size_t *outl,
                                     size_t outsize)
 {
+    if (!ossl_prov_is_running())
+        return 0;
     *outl = 0;
     return 1;
 }

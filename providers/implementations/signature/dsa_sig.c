@@ -328,6 +328,9 @@ int dsa_digest_signverify_update(void *vpdsactx, const unsigned char *data,
 {
     PROV_DSA_CTX *pdsactx = (PROV_DSA_CTX *)vpdsactx;
 
+    if (!ossl_prov_is_running())
+        return 0;
+
     if (pdsactx == NULL || pdsactx->mdctx == NULL)
         return 0;
 

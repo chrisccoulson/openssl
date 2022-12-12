@@ -237,6 +237,9 @@ static int aes_ocb_block_update(void *vctx, unsigned char *out, size_t *outl,
     size_t *buflen;
     OSSL_ocb_cipher_fn fn;
 
+    if (!ossl_prov_is_running())
+        return 0;
+
     if (!ctx->key_set || !update_iv(ctx))
         return 0;
 

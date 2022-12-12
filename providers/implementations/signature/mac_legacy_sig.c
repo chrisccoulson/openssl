@@ -144,6 +144,9 @@ int mac_digest_sign_update(void *vpmacctx, const unsigned char *data,
 {
     PROV_MAC_CTX *pmacctx = (PROV_MAC_CTX *)vpmacctx;
 
+    if (!ossl_prov_is_running())
+        return 0;
+
     if (pmacctx == NULL || pmacctx->macctx == NULL)
         return 0;
 

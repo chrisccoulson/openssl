@@ -115,10 +115,12 @@ static void *dhx_newdata(void *provctx)
 {
     DH *dh = NULL;
 
-    dh = ossl_dh_new_ex(PROV_LIBCTX_OF(provctx));
-    if (dh != NULL) {
-        DH_clear_flags(dh, DH_FLAG_TYPE_MASK);
-        DH_set_flags(dh, DH_FLAG_TYPE_DHX);
+    if (ossl_prov_is_running()) {
+        dh = ossl_dh_new_ex(PROV_LIBCTX_OF(provctx));
+        if (dh != NULL) {
+            DH_clear_flags(dh, DH_FLAG_TYPE_MASK);
+            DH_set_flags(dh, DH_FLAG_TYPE_DHX);
+        }
     }
     return dh;
 }

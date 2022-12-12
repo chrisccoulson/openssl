@@ -85,6 +85,9 @@ static void *rsakem_newctx(void *provctx)
 {
     PROV_RSA_CTX *prsactx =  OPENSSL_zalloc(sizeof(PROV_RSA_CTX));
 
+    if (!ossl_prov_is_running())
+        return NULL;
+
     if (prsactx == NULL)
         return NULL;
     prsactx->libctx = PROV_LIBCTX_OF(provctx);
@@ -106,6 +109,9 @@ static void *rsakem_dupctx(void *vprsactx)
     PROV_RSA_CTX *srcctx = (PROV_RSA_CTX *)vprsactx;
     PROV_RSA_CTX *dstctx;
 
+    if (!ossl_prov_is_running())
+        return NULL;
+
     dstctx = OPENSSL_zalloc(sizeof(*srcctx));
     if (dstctx == NULL)
         return NULL;
@@ -122,6 +128,9 @@ static int rsakem_init(void *vprsactx, void *vrsa,
                        const OSSL_PARAM params[], int operation)
 {
     PROV_RSA_CTX *prsactx = (PROV_RSA_CTX *)vprsactx;
+
+    if (!ossl_prov_is_running())
+        return 0;
 
     if (prsactx == NULL || vrsa == NULL)
         return 0;
