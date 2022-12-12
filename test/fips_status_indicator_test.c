@@ -1517,20 +1517,34 @@ static int test_rand(int n)
     return ok;
 }
 
-typedef struct GCM_DATA_st {
+typedef struct CIPHER_DATA_st {
+    const char *type;
     const unsigned char *iv;
+    OSSL_PARAM params[2];
     int unapproved;
-} GCM_DATA;
+} CIPHER_DATA;
 
-static const GCM_DATA gcm_data[] = {
-    { kExampleIV, 1},
-    { NULL, 0}
+static const CIPHER_DATA cipher_data[] = {
+    { SN_aes_256_gcm, kExampleIV, { OSSL_PARAM_END }, 1},
+    { SN_aes_256_gcm, NULL, { OSSL_PARAM_END }, 0},
+    { SN_aes_256_ccm, kExampleIV,
+        {
+            OSSL_PARAM_octet_string(OSSL_CIPHER_PARAM_AEAD_TAG, NULL, 4),
+            OSSL_PARAM_END
+        }, 1},
+    { SN_aes_256_ccm, kExampleIV,
+        {
+            OSSL_PARAM_octet_string(OSSL_CIPHER_PARAM_AEAD_TAG, NULL, 8),
+            OSSL_PARAM_END
+        }, 0}
 };
 
-static int test_gcm(int n)
+static int test_cipher(int n)
 {
-    const GCM_DATA *data = &gcm_data[n];
+    const CIPHER_DATA *data = &cipher_data[n];
+    const char *type = data->type;
     const unsigned char *iv = data->iv;
+    const OSSL_PARAM *params = data->params;
     int unapproved = data->unapproved;
     EVP_CIPHER *cipher = NULL;
     EVP_CIPHER_CTX *ctx = NULL;
@@ -1539,11 +1553,11 @@ static int test_gcm(int n)
     const char *errmsg = NULL;
     int ok = 0;
 
-    if (!TEST_ptr(cipher = EVP_CIPHER_fetch(NULL, SN_aes_256_gcm, NULL)))
+    if (!TEST_ptr(cipher = EVP_CIPHER_fetch(NULL, type, NULL)))
         goto err;
     if (!TEST_ptr(ctx = EVP_CIPHER_CTX_new()))
         goto err;
-    if (!TEST_true(EVP_EncryptInit_ex2(ctx, cipher, kExampleAES256Key, iv, NULL)))
+    if (!TEST_true(EVP_EncryptInit_ex2(ctx, cipher, kExampleAES256Key, iv, params)))
         goto err;
     if (!TEST_true(EVP_CipherUpdate(ctx, buf, &buf_len, buf, buf_len)))
         goto err;
@@ -1630,7 +1644,7 @@ int setup_tests(void)
                   OSSL_NELEM(raw_sign_and_verify_data));
     ADD_TEST(test_test_rng);
     ADD_ALL_TESTS(test_rand, OSSL_NELEM(rand_data));
-    ADD_ALL_TESTS(test_gcm, OSSL_NELEM(gcm_data));
+    ADD_ALL_TESTS(test_cipher, OSSL_NELEM(cipher_data));
 
     return 1;
 }

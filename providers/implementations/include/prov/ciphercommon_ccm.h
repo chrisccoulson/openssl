@@ -41,6 +41,7 @@ typedef struct prov_ccm_st {
     unsigned char buf[GENERIC_BLOCK_SIZE];
     CCM128_CONTEXT ccm_ctx;
     ccm128_f str;
+    OSSL_LIB_CTX *libctx;
     const PROV_CCM_HW *hw;     /* hardware specific methods  */
 } PROV_CCM_CTX;
 
@@ -85,7 +86,8 @@ OSSL_FUNC_cipher_set_ctx_params_fn ossl_ccm_set_ctx_params;
 OSSL_FUNC_cipher_update_fn ossl_ccm_stream_update;
 OSSL_FUNC_cipher_final_fn ossl_ccm_stream_final;
 OSSL_FUNC_cipher_cipher_fn ossl_ccm_cipher;
-void ossl_ccm_initctx(PROV_CCM_CTX *ctx, size_t keybits, const PROV_CCM_HW *hw);
+void ossl_ccm_initctx(void *provctx, PROV_CCM_CTX *ctx, size_t keybits,
+                      const PROV_CCM_HW *hw);
 
 int ossl_ccm_generic_setiv(PROV_CCM_CTX *ctx, const unsigned char *nonce,
                            size_t nlen, size_t mlen);

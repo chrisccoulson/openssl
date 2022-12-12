@@ -12,7 +12,11 @@
 #include <openssl/proverr.h>
 #include "prov/ciphercommon.h"
 #include "prov/ciphercommon_ccm.h"
+#include "prov/provider_ctx.h"
 #include "prov/providercommon.h"
+#include "prov/securitycheck.h"
+
+#define MIN_FIPS_TAG_LENGTH 8
 
 static int ccm_cipher_internal(PROV_CCM_CTX *ctx, unsigned char *out,
                                size_t *padlen, const unsigned char *in,
@@ -391,6 +395,9 @@ static int ccm_cipher_internal(PROV_CCM_CTX *ctx, unsigned char *out,
     if (!ctx->key_set)
         return 0;
 
+    if (ctx->enc && ctx->m < MIN_FIPS_TAG_LENGTH)
+        ossl_record_fips_unapproved_usage(ctx->libctx);
+
     if (ctx->tls_aad_len != UNINITIALISED_SIZET)
         return ccm_tls_cipher(ctx, out, padlen, in, len);
 
@@ -442,7 +449,8 @@ err:
     return rv;
 }
 
-void ossl_ccm_initctx(PROV_CCM_CTX *ctx, size_t keybits, const PROV_CCM_HW *hw)
+void ossl_ccm_initctx(void *provctx, PROV_CCM_CTX *ctx, size_t keybits,
+                      const PROV_CCM_HW *hw)
 {
     ctx->keylen = keybits / 8;
     ctx->key_set = 0;
@@ -453,4 +461,5 @@ void ossl_ccm_initctx(PROV_CCM_CTX *ctx, size_t keybits, const PROV_CCM_HW *hw)
     ctx->m = 12;
     ctx->tls_aad_len = UNINITIALISED_SIZET;
     ctx->hw = hw;
+    ctx->libctx = PROV_LIBCTX_OF(provctx);
 }
