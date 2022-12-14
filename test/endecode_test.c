@@ -1365,10 +1365,12 @@ int setup_tests(void)
     MAKE_DOMAIN_KEYS(ECExplicitTriNamedCurve, "EC", ec_explicit_tri_params_nc);
     MAKE_DOMAIN_KEYS(ECExplicitTri2G, "EC", ec_explicit_tri_params_explicit);
 # endif
-    MAKE_KEYS(ED25519, "ED25519", NULL);
-    MAKE_KEYS(ED448, "ED448", NULL);
-    MAKE_KEYS(X25519, "X25519", NULL);
-    MAKE_KEYS(X448, "X448", NULL);
+    if (!is_fips) {
+        MAKE_KEYS(ED25519, "ED25519", NULL);
+        MAKE_KEYS(ED448, "ED448", NULL);
+        MAKE_KEYS(X25519, "X25519", NULL);
+        MAKE_KEYS(X448, "X448", NULL);
+    }
 #endif
     TEST_info("Loading RSA key...");
     ok = ok && TEST_ptr(key_RSA = load_pkey_pem(rsa_file, keyctx));
@@ -1411,14 +1413,16 @@ int setup_tests(void)
         ADD_TEST_SUITE(ECExplicitTri2G);
         ADD_TEST_SUITE_LEGACY(ECExplicitTri2G);
 # endif
-        ADD_TEST_SUITE(ED25519);
-        ADD_TEST_SUITE(ED448);
-        ADD_TEST_SUITE(X25519);
-        ADD_TEST_SUITE(X448);
-        /*
-         * ED25519, ED448, X25519 and X448 have no support for
-         * PEM_write_bio_PrivateKey_traditional(), so no legacy tests.
-         */
+        if (!is_fips) {
+            ADD_TEST_SUITE(ED25519);
+            ADD_TEST_SUITE(ED448);
+            ADD_TEST_SUITE(X25519);
+            ADD_TEST_SUITE(X448);
+            /*
+             * ED25519, ED448, X25519 and X448 have no support for
+             * PEM_write_bio_PrivateKey_traditional(), so no legacy tests.
+             */
+        }
 #endif
         ADD_TEST_SUITE(RSA);
         ADD_TEST_SUITE_LEGACY(RSA);

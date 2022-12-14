@@ -3670,7 +3670,7 @@ static int early_data_skip_helper(int testtype, int idx)
         if (!TEST_true(SSL_set1_groups_list(serverssl, "ffdhe3072")))
             goto end;
 #else
-        if (!TEST_true(SSL_set1_groups_list(serverssl, "P-256")))
+        if (!TEST_true(SSL_set1_groups_list(serverssl, "P-521")))
             goto end;
 #endif
     } else if (idx == 2) {
@@ -4565,6 +4565,8 @@ static int test_ciphersuite_change(void)
 # ifndef OPENSSL_NO_EC
 static int ecdhe_kexch_groups[] = {NID_X9_62_prime256v1, NID_secp384r1,
                                    NID_secp521r1, NID_X25519, NID_X448};
+static int ecdhe_kexch_groups_fips[] = {NID_X9_62_prime256v1, NID_secp384r1,
+                                        NID_secp521r1};
 # endif
 # ifndef OPENSSL_NO_DH
 static int ffdhe_kexch_groups[] = {NID_ffdhe2048, NID_ffdhe3072, NID_ffdhe4096,
@@ -4589,8 +4591,13 @@ static int test_key_exchange(int idx)
 # endif
             /* Fall through */
         case 0:
-            kexch_groups = ecdhe_kexch_groups;
-            kexch_groups_size = OSSL_NELEM(ecdhe_kexch_groups);
+            if (is_fips) {
+                kexch_groups = ecdhe_kexch_groups_fips;
+                kexch_groups_size = OSSL_NELEM(ecdhe_kexch_groups_fips);
+            } else {
+                kexch_groups = ecdhe_kexch_groups;
+                kexch_groups_size = OSSL_NELEM(ecdhe_kexch_groups);
+            }
             kexch_name0 = "secp256r1";
             break;
         case 1:
@@ -4606,10 +4613,14 @@ static int test_key_exchange(int idx)
             kexch_name0 = "secp521r1";
             break;
         case 4:
+            if (is_fips)
+                return 1;
             kexch_alg = NID_X25519;
             kexch_name0 = "x25519";
             break;
         case 5:
+            if (is_fips)
+                return 1;
             kexch_alg = NID_X448;
             kexch_name0 = "x448";
             break;
@@ -4732,39 +4743,33 @@ static int set_ssl_groups(SSL *serverssl, SSL *clientssl, int clientmulti,
 {
     int kexch_alg;
     int *kexch_groups = &kexch_alg;
-    int numec, numff;
+    int *multi_kexch_groups;
+    int num;;
 
-    numec = OSSL_NELEM(ecdhe_kexch_groups);
-    numff = OSSL_NELEM(ffdhe_kexch_groups);
-    if (isecdhe)
-        kexch_alg = ecdhe_kexch_groups[idx];
-    else
-        kexch_alg = ffdhe_kexch_groups[idx];
+    if (isecdhe) {
+        if (is_fips) {
+            num = OSSL_NELEM(ecdhe_kexch_groups_fips);
+            multi_kexch_groups = ecdhe_kexch_groups_fips;
+        } else {
+            num = OSSL_NELEM(ecdhe_kexch_groups);
+            multi_kexch_groups = ecdhe_kexch_groups;
+        }
+    } else {
+        num = OSSL_NELEM(ffdhe_kexch_groups);
+        multi_kexch_groups = ffdhe_kexch_groups;
+    }
+    kexch_alg = multi_kexch_groups[idx];
 
     if (clientmulti) {
         if (!TEST_true(SSL_set1_groups(serverssl, kexch_groups, 1)))
             return 0;
-        if (isecdhe) {
-            if (!TEST_true(SSL_set1_groups(clientssl, ecdhe_kexch_groups,
-                                           numec)))
-                return 0;
-        } else {
-            if (!TEST_true(SSL_set1_groups(clientssl, ffdhe_kexch_groups,
-                                           numff)))
-                return 0;
-        }
+        if (!TEST_true(SSL_set1_groups(clientssl, multi_kexch_groups, num)))
+            return 0;
     } else {
         if (!TEST_true(SSL_set1_groups(clientssl, kexch_groups, 1)))
             return 0;
-        if (isecdhe) {
-            if (!TEST_true(SSL_set1_groups(serverssl, ecdhe_kexch_groups,
-                                           numec)))
-                return 0;
-        } else {
-            if (!TEST_true(SSL_set1_groups(serverssl, ffdhe_kexch_groups,
-                                           numff)))
-                return 0;
-        }
+        if (!TEST_true(SSL_set1_groups(serverssl, multi_kexch_groups, num)))
+            return 0;
     }
     return 1;
 }
@@ -4814,10 +4819,13 @@ static int test_negotiated_group(int idx)
     if (!isecdhe)
         idx -= numec;
     /* Now 'idx' is an index into ecdhe_kexch_groups or ffdhe_kexch_groups */
-    if (isecdhe)
+    if (isecdhe) {
+        if (is_fips && idx >= OSSL_NELEM(ecdhe_kexch_groups_fips))
+            return 1;
         kexch_alg = ecdhe_kexch_groups[idx];
-    else
+    } else
         kexch_alg = ffdhe_kexch_groups[idx];
+
     /* We expect nothing for the unimplemented TLS 1.2 FFDHE named groups */
     if (!istls13 && !isecdhe)
         expectednid = NID_undef;
@@ -5245,7 +5253,7 @@ static int test_tls13_psk(int idx)
     if (!TEST_true(SSL_set1_groups_list(serverssl, "ffdhe3072")))
         goto end;
 #else
-    if (!TEST_true(SSL_set1_groups_list(serverssl, "P-256")))
+    if (!TEST_true(SSL_set1_groups_list(serverssl, "P-521")))
         goto end;
 #endif
 

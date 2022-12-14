@@ -3,7 +3,7 @@
 
 $DH_GOAL=../../libdefault.a ../../libfips.a
 $ECDH_GOAL=../../libdefault.a ../../libfips.a
-$ECX_GOAL=../../libdefault.a ../../libfips.a
+$ECX_GOAL=../../libdefault.a
 $KDF_GOAL=../../libdefault.a ../../libfips.a
 
 IF[{- !$disabled{dh} -}]
