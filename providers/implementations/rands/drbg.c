@@ -156,6 +156,10 @@ size_t ossl_drbg_get_seed(void *vdrbg, unsigned char **pout,
     size_t bytes_needed;
     unsigned char *buffer;
 
+#ifdef FIPS_MODULE
+    prediction_resistance = 1;
+#endif
+
     /* Figure out how many bytes we need */
     bytes_needed = entropy >= 0 ? (entropy + 7) / 8 : 0;
     if (bytes_needed < min_len)

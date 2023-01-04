@@ -145,6 +145,24 @@ static int mock_provider_init(const OSSL_CORE_HANDLE *handle,
     return 1;
 }
 
+static unsigned int query_rand_uint(EVP_RAND_CTX *drbg, const char *name)
+{
+    OSSL_PARAM params[2] = { OSSL_PARAM_END, OSSL_PARAM_END };
+    unsigned int n;
+
+    *params = OSSL_PARAM_construct_uint(name, &n);
+    if (EVP_RAND_CTX_get_params(drbg, params))
+        return n;
+    return 0;
+}
+
+#define DRBG_UINT(name)                                 \
+    static unsigned int name(EVP_RAND_CTX *drbg)        \
+    {                                                   \
+        return query_rand_uint(drbg, #name);            \
+    }
+DRBG_UINT(reseed_counter)
+
 static MOCK_RAND *mock_rand(EVP_RAND_CTX *drbg)
 {
     return (MOCK_RAND *)drbg->algctx;
@@ -414,6 +432,50 @@ static int test_libctx_drbgs_all_use_same_provider(void)
     return ok;
 }
 
+static int test_fips_parent_always_reseeds(void)
+{
+    EVP_RAND *rand = NULL;
+    EVP_RAND_CTX *ctx1 = NULL, *ctx2 = NULL;
+    char cipher[] = "AES-128-CTR";
+    OSSL_PARAM params[] = {
+        OSSL_PARAM_utf8_string(OSSL_DRBG_PARAM_CIPHER, cipher,
+                               sizeof(cipher) - 1),
+        OSSL_PARAM_END
+    };
+    unsigned int reseed1;
+    int ok = 0;
+
+    if (!TEST_ptr(rand = EVP_RAND_fetch(NULL, "CTR-DRBG", "provider=fips")))
+        goto err;
+
+    if (!TEST_ptr(ctx1 = EVP_RAND_CTX_new(rand, NULL)))
+        goto err;
+    if (!TEST_true(EVP_RAND_instantiate(ctx1, 0, 0, NULL, 0, params)))
+        goto err;
+
+    if (!TEST_ptr(ctx2 = EVP_RAND_CTX_new(rand, ctx1)))
+        goto err;
+    if (!TEST_true(EVP_RAND_instantiate(ctx2, 0, 0, NULL, 0, params)))
+        goto err;
+
+    reseed1 = reseed_counter(ctx1);
+
+    if (!TEST_true(EVP_RAND_reseed(ctx2, 0, NULL, 0, NULL, 0)))
+        goto err;
+
+    if (!TEST_int_gt(reseed_counter(ctx1), reseed1))
+        goto err;
+
+    ok = 1;
+
+ err:
+    EVP_RAND_CTX_free(ctx2);
+    EVP_RAND_CTX_free(ctx1);
+    EVP_RAND_free(rand);
+
+    return ok;
+}
+
 int setup_tests(void)
 {
     OPTION_CHOICE o;
@@ -439,6 +501,7 @@ int setup_tests(void)
     ADD_TEST(test_libctx_mock_primary_drbg_uses_seed);
     ADD_TEST(test_libctx_restricted_mock_primary_drbg_ignores_seed);
     ADD_TEST(test_libctx_drbgs_all_use_same_provider);
+    ADD_TEST(test_fips_parent_always_reseeds);
 
     return 1;
 }
