@@ -119,6 +119,7 @@ struct kmac_data_st {
     EVP_MD_CTX *ctx;
     PROV_DIGEST digest;
     size_t out_len;
+    size_t raw_key_len;
     size_t key_len;
     size_t custom_len;
     /* If xof_mode = 1 then we use right_encode(0) */
@@ -249,6 +250,8 @@ static int kmac_setkey(struct kmac_data_st *kctx, const unsigned char *key,
         ERR_raise(ERR_LIB_PROV, PROV_R_INVALID_KEY_LENGTH);
         return 0;
     }
+    if (!ossl_mac_check_keylen(PROV_LIBCTX_OF(kctx->provctx), keylen))
+        return 0;
     if (w < 0) {
         ERR_raise(ERR_LIB_PROV, PROV_R_INVALID_DIGEST_LENGTH);
         return 0;
@@ -256,6 +259,7 @@ static int kmac_setkey(struct kmac_data_st *kctx, const unsigned char *key,
     if (!kmac_bytepad_encode_key(kctx->key, sizeof(kctx->key), &kctx->key_len,
                                  key, keylen, (size_t)w))
         return 0;
+    kctx->raw_key_len = keylen;
     return 1;
 }
 
@@ -341,6 +345,9 @@ static int kmac_final(void *vmacctx, unsigned char *out, size_t *outl,
     size_t lbits, len;
     unsigned char encoded_outlen[KMAC_MAX_ENCODED_HEADER_LEN];
     int ok;
+
+    ossl_record_fips_unapproved_mac_keylen(PROV_LIBCTX_OF(kctx->provctx),
+                                           kctx->raw_key_len);
 
     if (!ossl_prov_is_running())
         return 0;

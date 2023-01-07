@@ -1587,8 +1587,10 @@ static int test_cipher(int n)
 }
 
 typedef struct MAC_DATA_st {
+    char *type;
     unsigned char *key;
     size_t keylen;
+    OSSL_PARAM params[2];
     int unapproved;
 } MAC_DATA;
 
@@ -1601,23 +1603,32 @@ static unsigned char mac_key_bad[] = {
 };
 
 static const MAC_DATA mac_data[] = {
-    { mac_key_good, sizeof(mac_key_good), 0},
-    { mac_key_bad, sizeof(mac_key_bad), 1}
+    { SN_hmac, mac_key_good, sizeof(mac_key_good),
+        {
+            OSSL_PARAM_utf8_string(OSSL_MAC_PARAM_DIGEST, SN_sha256,
+                                   sizeof(SN_sha256) - 1),
+            OSSL_PARAM_END
+        }, 0},
+    { SN_hmac, mac_key_bad, sizeof(mac_key_bad),
+        {
+            OSSL_PARAM_utf8_string(OSSL_MAC_PARAM_DIGEST, SN_sha256,
+                                   sizeof(SN_sha256) - 1),
+            OSSL_PARAM_END
+        }, 1},
+    { SN_kmac128, mac_key_good, sizeof(mac_key_good), { OSSL_PARAM_END }, 0},
+    { SN_kmac128, mac_key_bad, sizeof(mac_key_bad), { OSSL_PARAM_END }, 1}
 };
 
 static int test_mac(int n)
 {
     const MAC_DATA *data = &mac_data[n];
+    const char *type = data->type;
     const unsigned char *key = data->key;
     size_t keylen = data->keylen;
+    const OSSL_PARAM *params = data->params;
     int unapproved = data->unapproved;
     EVP_MAC *mac = NULL;
     EVP_MAC_CTX *ctx = NULL;
-    OSSL_PARAM params[] = {
-        OSSL_PARAM_utf8_string(OSSL_MAC_PARAM_DIGEST, SN_sha256,
-                               sizeof(SN_sha256) - 1),
-        OSSL_PARAM_END
-    };
     const unsigned char msg[] = "Hello World!";
     size_t msglen = sizeof(msg);
     unsigned char out[EVP_MAX_MD_SIZE];
@@ -1625,7 +1636,7 @@ static int test_mac(int n)
     const char *errmsg = NULL;
     int ok = 0;
 
-    if (!TEST_ptr(mac = EVP_MAC_fetch(NULL, SN_hmac, NULL)))
+    if (!TEST_ptr(mac = EVP_MAC_fetch(NULL, type, NULL)))
         goto err;
     if (!TEST_ptr(ctx = EVP_MAC_CTX_new(mac)))
         goto err;
@@ -1656,9 +1667,20 @@ static int test_mac(int n)
     return ok;
 }
 
+typedef struct MAC_PKEY_DATA_st {
+    unsigned char *key;
+    size_t keylen;
+    int unapproved;
+} MAC_PKEY_DATA;
+
+static const MAC_PKEY_DATA mac_pkey_data[] = {
+    { mac_key_good, sizeof(mac_key_good), 0},
+    { mac_key_bad, sizeof(mac_key_bad), 1}
+};
+
 static int test_mac_pkey(int n)
 {
-    const MAC_DATA *data = &mac_data[n];
+    const MAC_PKEY_DATA *data = &mac_pkey_data[n];
     const unsigned char *key = data->key;
     size_t keylen = data->keylen;
     int unapproved = data->unapproved;
@@ -1768,7 +1790,7 @@ int setup_tests(void)
     ADD_ALL_TESTS(test_rand, OSSL_NELEM(rand_data));
     ADD_ALL_TESTS(test_cipher, OSSL_NELEM(cipher_data));
     ADD_ALL_TESTS(test_mac, OSSL_NELEM(mac_data));
-    ADD_ALL_TESTS(test_mac_pkey, OSSL_NELEM(mac_data));
+    ADD_ALL_TESTS(test_mac_pkey, OSSL_NELEM(mac_pkey_data));
 
     return 1;
 }
