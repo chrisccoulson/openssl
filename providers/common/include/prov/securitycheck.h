@@ -21,6 +21,7 @@ int ossl_rsa_check_key(OSSL_LIB_CTX *ctx, const RSA *rsa, int operation);
 int ossl_ec_check_key(OSSL_LIB_CTX *ctx, const EC_KEY *ec, int protect);
 int ossl_dsa_check_key(OSSL_LIB_CTX *ctx, const DSA *dsa, int sign);
 int ossl_dh_check_key(OSSL_LIB_CTX *ctx, const DH *dh);
+int ossl_mac_check_keylen(OSSL_LIB_CTX *ctx, size_t keylen);
 
 int ossl_digest_is_allowed(OSSL_LIB_CTX *ctx, const EVP_MD *md);
 int ossl_digest_is_allowed_ex(OSSL_LIB_CTX *ctx, const EVP_MD *md, int flags);
@@ -37,6 +38,7 @@ int ossl_digest_get_approved_nid(const EVP_MD *md);
 int ossl_digest_rsa_sign_get_md_nid(OSSL_LIB_CTX *ctx, const EVP_MD *md,
                                     int sha1_allowed);
 int ossl_securitycheck_enabled(OSSL_LIB_CTX *libctx);
+int ossl_disable_mac_keylen_check(EVP_MAC_CTX *ctx);
 
 /*
  * FIPS status indicator trggers. Note that if any of these are unable to
@@ -56,3 +58,4 @@ int ossl_record_fips_unapproved_digest_usage(OSSL_LIB_CTX *ctx,
                                              int flags);
 int ossl_record_fips_unapproved_rsa_padding_usage(OSSL_LIB_CTX *ctx,
                                                   int padding, int operation);
+int ossl_record_fips_unapproved_mac_keylen(OSSL_LIB_CTX *ctx, size_t keylen);

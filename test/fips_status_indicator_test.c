@@ -983,6 +983,10 @@ static unsigned char kdf_key[] = {'k', 'e', 'y'};
 static unsigned char sshkdf_xcghash[] = {'x', 'c', 'g', 'h', 'a', 's', 'h'};
 static unsigned char sshkdf_session_id[] = {
     's', 'e', 's', 's', 'i', 'o', 'n', '_', 'i', 'd'};
+static unsigned char tls1_key[] = {
+    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b,
+    0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13
+};
 static unsigned char tls1_seed[] = {'s', 'e', 'e', 'd'};
 static char tls13_extract_mode[] = "EXTRACT_ONLY";
 
@@ -1114,8 +1118,8 @@ static const KDF_DATA kdf_data[] = {
         {
             OSSL_PARAM_utf8_string(OSSL_KDF_PARAM_DIGEST, SN_sha3_256,
                                    sizeof(SN_sha3_256) - 1),
-            OSSL_PARAM_octet_string(OSSL_KDF_PARAM_SECRET, kdf_key,
-                                    sizeof(kdf_key)),
+            OSSL_PARAM_octet_string(OSSL_KDF_PARAM_SECRET, tls1_key,
+                                    sizeof(tls1_key)),
             OSSL_PARAM_octet_string(OSSL_KDF_PARAM_SEED, tls1_seed,
                                     sizeof(tls1_seed)),
             OSSL_PARAM_END
@@ -1124,8 +1128,8 @@ static const KDF_DATA kdf_data[] = {
         {
             OSSL_PARAM_utf8_string(OSSL_KDF_PARAM_DIGEST, SN_sha256,
                                    sizeof(SN_sha256) - 1),
-            OSSL_PARAM_octet_string(OSSL_KDF_PARAM_SECRET, kdf_key,
-                                    sizeof(kdf_key)),
+            OSSL_PARAM_octet_string(OSSL_KDF_PARAM_SECRET, tls1_key,
+                                    sizeof(tls1_key)),
             OSSL_PARAM_octet_string(OSSL_KDF_PARAM_SEED, tls1_seed,
                                     sizeof(tls1_seed)),
             OSSL_PARAM_END
@@ -1582,6 +1586,124 @@ static int test_cipher(int n)
     return ok;
 }
 
+typedef struct MAC_DATA_st {
+    unsigned char *key;
+    size_t keylen;
+    int unapproved;
+} MAC_DATA;
+
+static unsigned char mac_key_good[] = {
+    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b,
+    0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13
+};
+static unsigned char mac_key_bad[] = {
+    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b
+};
+
+static const MAC_DATA mac_data[] = {
+    { mac_key_good, sizeof(mac_key_good), 0},
+    { mac_key_bad, sizeof(mac_key_bad), 1}
+};
+
+static int test_mac(int n)
+{
+    const MAC_DATA *data = &mac_data[n];
+    const unsigned char *key = data->key;
+    size_t keylen = data->keylen;
+    int unapproved = data->unapproved;
+    EVP_MAC *mac = NULL;
+    EVP_MAC_CTX *ctx = NULL;
+    OSSL_PARAM params[] = {
+        OSSL_PARAM_utf8_string(OSSL_MAC_PARAM_DIGEST, SN_sha256,
+                               sizeof(SN_sha256) - 1),
+        OSSL_PARAM_END
+    };
+    const unsigned char msg[] = "Hello World!";
+    size_t msglen = sizeof(msg);
+    unsigned char out[EVP_MAX_MD_SIZE];
+    size_t outlen = sizeof(out);
+    const char *errmsg = NULL;
+    int ok = 0;
+
+    if (!TEST_ptr(mac = EVP_MAC_fetch(NULL, SN_hmac, NULL)))
+        goto err;
+    if (!TEST_ptr(ctx = EVP_MAC_CTX_new(mac)))
+        goto err;
+    if (!TEST_true(EVP_MAC_init(ctx, key, keylen, params)))
+        goto err;
+    if (!TEST_true(EVP_MAC_update(ctx, msg, msglen)))
+        goto err;
+    if (!TEST_true(EVP_MAC_final(ctx, out, &outlen, outlen)))
+        goto err;
+
+    if (unapproved && !test_unapproved(1)) {
+        errmsg = "unexpected unapproved state";
+        goto err;
+    }
+    if (!test_unapproved(0)) {
+        errmsg = "unexpected approved state";
+        goto err;
+    }
+
+    ok = 1;
+
+ err:
+    EVP_MAC_CTX_free(ctx);
+    EVP_MAC_free(mac);
+
+    if (errmsg != NULL)
+        TEST_info("%s", errmsg);
+    return ok;
+}
+
+static int test_mac_pkey(int n)
+{
+    const MAC_DATA *data = &mac_data[n];
+    const unsigned char *key = data->key;
+    size_t keylen = data->keylen;
+    int unapproved = data->unapproved;
+    EVP_PKEY *pkey = NULL;
+    EVP_MD_CTX *ctx = NULL;
+    const unsigned char msg[] = "Hello World!";
+    size_t msglen = sizeof(msg);
+    unsigned char out[EVP_MAX_MD_SIZE];
+    size_t outlen = sizeof(out);
+    const char *errmsg = NULL;
+    int ok = 0;
+
+    if (!TEST_ptr(pkey = EVP_PKEY_new_raw_private_key_ex(NULL, SN_hmac, NULL,
+                                                         key, keylen)))
+        goto err;
+    if (!TEST_ptr(ctx = EVP_MD_CTX_new()))
+        goto err;
+    if (!TEST_true(EVP_DigestSignInit_ex(ctx, NULL, SN_sha256, NULL, NULL, pkey,
+                                         NULL)))
+        goto err;
+    if (!TEST_true(EVP_DigestSignUpdate(ctx, msg, msglen)))
+       goto err;
+    if (!TEST_true(EVP_DigestSignFinal(ctx, out, &outlen)))
+        goto err;
+
+    if (unapproved && !test_unapproved(1)) {
+        errmsg = "unexpected unapproved state";
+        goto err;
+    }
+    if (!test_unapproved(0)) {
+        errmsg = "unexpected approved state";
+        goto err;
+    }
+
+    ok = 1;
+
+ err:
+    EVP_MD_CTX_free(ctx);
+    EVP_PKEY_free(pkey);
+
+    if (errmsg != NULL)
+        TEST_info("%s", errmsg);
+    return ok;
+}
+
 typedef enum OPTION_choice {
     OPT_ERR = -1,
     OPT_EOF = 0,
@@ -1645,6 +1767,8 @@ int setup_tests(void)
     ADD_TEST(test_test_rng);
     ADD_ALL_TESTS(test_rand, OSSL_NELEM(rand_data));
     ADD_ALL_TESTS(test_cipher, OSSL_NELEM(cipher_data));
+    ADD_ALL_TESTS(test_mac, OSSL_NELEM(mac_data));
+    ADD_ALL_TESTS(test_mac_pkey, OSSL_NELEM(mac_data));
 
     return 1;
 }

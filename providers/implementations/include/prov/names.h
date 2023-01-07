@@ -326,4 +326,5 @@
 #define PROV_NAMES_SM2 "SM2:1.2.156.10197.1.301"
 #define PROV_DESCS_SM2 "OpenSSL SM2 implementation"
 
+#define PROV_MAC_PARAM_MAC_DISABLE_KEYLEN_CHECK "ubuntu.disable_keylen_check"
 #define PROV_SIGNATURE_PARAM_ECDSA_KAT_K "ubuntu.kat_k"

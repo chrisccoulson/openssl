@@ -28,6 +28,9 @@
 #include "prov/provider_ctx.h"
 #include "prov/providercommon.h"
 #include "prov/implementations.h"
+#ifdef FIPS_MODULE
+#include "prov/names.h"
+#endif
 #include "prov/provider_util.h"
 #include "prov/securitycheck.h"
 #include "e_os.h"
@@ -416,6 +419,14 @@ static int HKDF_Extract(OSSL_LIB_CTX *libctx, const EVP_MD *evp_md,
                         unsigned char *prk, size_t prk_len)
 {
     int sz = EVP_MD_get_size(evp_md);
+    OSSL_PARAM params[] = { OSSL_PARAM_END, OSSL_PARAM_END };
+
+#ifdef FIPS_MODULE
+    unsigned int disable_hmac_keylen_check = 1;
+    params[0] =
+        OSSL_PARAM_construct_uint(PROV_MAC_PARAM_MAC_DISABLE_KEYLEN_CHECK,
+                                  &disable_hmac_keylen_check);
+#endif
 
     if (sz < 0)
         return 0;
@@ -425,7 +436,7 @@ static int HKDF_Extract(OSSL_LIB_CTX *libctx, const EVP_MD *evp_md,
     }
     /* calc: PRK = HMAC-Hash(salt, IKM) */
     return
-        EVP_Q_mac(libctx, "HMAC", NULL, EVP_MD_get0_name(evp_md), NULL, salt,
+        EVP_Q_mac(libctx, "HMAC", NULL, EVP_MD_get0_name(evp_md), params, salt,
                   salt_len, ikm, ikm_len, prk, EVP_MD_get_size(evp_md), NULL)
         != NULL;
 }

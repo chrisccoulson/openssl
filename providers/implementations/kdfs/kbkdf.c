@@ -43,6 +43,7 @@
 #include "prov/provider_ctx.h"
 #include "prov/provider_util.h"
 #include "prov/providercommon.h"
+#include "prov/securitycheck.h"
 
 #include "e_os.h"
 
@@ -296,6 +297,9 @@ static int kbkdf_set_ctx_params(void *vctx, const OSSL_PARAM params[])
         ERR_raise(ERR_LIB_PROV, PROV_R_INVALID_MAC);
         return 0;
     }
+
+    if (ctx->ctx_init != NULL && !ossl_disable_mac_keylen_check(ctx->ctx_init))
+        return 0;
 
     p = OSSL_PARAM_locate_const(params, OSSL_KDF_PARAM_MODE);
     if (p != NULL

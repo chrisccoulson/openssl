@@ -57,6 +57,11 @@ int ossl_record_fips_unapproved_rsa_padding_usage(OSSL_LIB_CTX *ctx,
     return 1;
 }
 
+int ossl_record_fips_unapproved_mac_keylen(OSSL_LIB_CTX *ctx, size_t keylen)
+{
+    return 1;
+}
+
 int ossl_digest_rsa_sign_get_md_nid(OSSL_LIB_CTX *ctx, const EVP_MD *md,
                                     ossl_unused int sha1_allowed)
 {
@@ -75,4 +80,9 @@ int ossl_digest_rsa_sign_get_md_nid(OSSL_LIB_CTX *ctx, const EVP_MD *md,
     if (mdnid == NID_undef)
         mdnid = ossl_digest_md_to_nid(md, name_to_nid, OSSL_NELEM(name_to_nid));
     return mdnid;
+}
+
+int ossl_disable_mac_keylen_check(EVP_MAC_CTX *ctx)
+{
+    return 1;
 }

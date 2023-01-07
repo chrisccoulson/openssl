@@ -19,6 +19,7 @@
 #include <openssl/core_names.h>
 #include <openssl/obj_mac.h>
 #include <openssl/self_test.h>
+#include "prov/names.h"
 #include "prov/providercommon.h"
 #include "prov/securitycheck.h"
 #include "securitycheck.h"
@@ -160,6 +161,14 @@ int ossl_record_fips_unapproved_rsa_padding_usage(OSSL_LIB_CTX *ctx,
     return 1;
 }
 
+int ossl_record_fips_unapproved_mac_keylen(OSSL_LIB_CTX *ctx, size_t keylen)
+{
+    if (!mac_check_keylen(keylen))
+        return ossl_record_fips_unapproved_usage(ctx);
+
+    return 1;
+}
+
 int ossl_digest_rsa_sign_get_md_nid(OSSL_LIB_CTX *ctx, const EVP_MD *md,
                                     int sha1_allowed)
 {
@@ -167,4 +176,16 @@ int ossl_digest_rsa_sign_get_md_nid(OSSL_LIB_CTX *ctx, const EVP_MD *md,
     return ossl_digest_get_approved_nid_with_sha1(ctx, md, sha1_allowed);
 #endif /* OPENSSL_NO_FIPS_SECURITYCHECKS */
     return ossl_digest_get_approved_nid(md);
+}
+
+int ossl_disable_mac_keylen_check(EVP_MAC_CTX *ctx)
+{
+    OSSL_PARAM params[] = { OSSL_PARAM_END, OSSL_PARAM_END };
+    unsigned int disable_mac_keylen_check = 1;
+
+    params[0] =
+        OSSL_PARAM_construct_uint(PROV_MAC_PARAM_MAC_DISABLE_KEYLEN_CHECK,
+                                  &disable_mac_keylen_check);
+
+    return EVP_MAC_CTX_set_params(ctx, params);
 }

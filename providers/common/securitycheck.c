@@ -217,6 +217,20 @@ int ossl_dh_check_key(OSSL_LIB_CTX *ctx, const DH *dh)
 }
 #endif /* OPENSSL_NO_DH */
 
+int mac_check_keylen(size_t keylen)
+{
+    return keylen >= 14;
+}
+
+int ossl_mac_check_keylen(OSSL_LIB_CTX *ctx, size_t keylen)
+{
+#if !defined(OPENSSL_NO_FIPS_SECURITYCHECKS)
+    if (ossl_securitycheck_enabled(ctx))
+        return mac_check_keylen(keylen);
+#endif /* OPENSSL_NO_FIPS_SECURITYCHECKS */
+    return 1;
+}
+
 int ossl_digest_get_approved_nid_with_sha1(OSSL_LIB_CTX *ctx, const EVP_MD *md,
                                            int sha1_allowed)
 {

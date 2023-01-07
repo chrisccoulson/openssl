@@ -24,6 +24,7 @@
 #include <openssl/proverr.h>
 
 #include "prov/implementations.h"
+#include "prov/names.h"
 #include "prov/provider_ctx.h"
 #include "prov/provider_util.h"
 #include "prov/providercommon.h"
@@ -60,6 +61,10 @@ struct hmac_data_st {
     int tls_header_set;
     unsigned char tls_mac_out[EVP_MAX_MD_SIZE];
     size_t tls_mac_out_size;
+#ifdef FIPS_MODULE
+    int fips_internal;
+    int disable_keylen_check;
+#endif
 };
 
 /* Defined in ssl/s3_cbc.c */
@@ -89,6 +94,19 @@ static void *hmac_new(void *provctx)
 
     return macctx;
 }
+
+#ifdef FIPS_MODULE
+static void *hmac_fips_intern_new(void *provctx)
+{
+    struct hmac_data_st *macctx;
+
+    if ((macctx = hmac_new(provctx)) == NULL)
+        return NULL;
+
+    macctx->fips_internal = 1;
+    return macctx;
+}
+#endif
 
 static void hmac_free(void *vmacctx)
 {
@@ -155,6 +173,14 @@ static int hmac_setkey(struct hmac_data_st *macctx,
                        const unsigned char *key, size_t keylen)
 {
     const EVP_MD *digest;
+    int disable_keylen_check = 0;
+
+#ifdef FIPS_MODULE
+    disable_keylen_check = macctx->disable_keylen_check;
+#endif
+    if (!disable_keylen_check
+        && !ossl_mac_check_keylen(PROV_LIBCTX_OF(macctx->provctx), keylen))
+        return 0;
 
     if (macctx->key != NULL)
         OPENSSL_secure_clear_free(macctx->key, macctx->keylen);
@@ -230,6 +256,15 @@ static int hmac_final(void *vmacctx, unsigned char *out, size_t *outl,
 {
     unsigned int hlen;
     struct hmac_data_st *macctx = vmacctx;
+    int disable_keylen_check = 0;
+
+#ifdef FIPS_MODULE
+    disable_keylen_check = macctx->disable_keylen_check;
+#endif
+
+    if (!disable_keylen_check)
+        ossl_record_fips_unapproved_mac_keylen(PROV_LIBCTX_OF(macctx->provctx),
+                                               macctx->keylen);
 
     if (!ossl_prov_is_running())
         return 0;
@@ -354,6 +389,18 @@ static int hmac_set_ctx_params(void *vmacctx, const OSSL_PARAM params[])
         if (!OSSL_PARAM_get_size_t(p, &macctx->tls_data_size))
             return 0;
     }
+
+#ifdef FIPS_MODULE
+    if (macctx->fips_internal
+        && (p = OSSL_PARAM_locate_const(params,
+                                        PROV_MAC_PARAM_MAC_DISABLE_KEYLEN_CHECK)) != NULL) {
+        unsigned int disable;
+        if (!OSSL_PARAM_get_uint(p, &disable))
+            return 0;
+        macctx->disable_keylen_check = !!disable;
+    }
+#endif
+
     return 1;
 }
 
@@ -372,3 +419,21 @@ const OSSL_DISPATCH ossl_hmac_functions[] = {
     { OSSL_FUNC_MAC_SET_CTX_PARAMS, (void (*)(void))hmac_set_ctx_params },
     { 0, NULL }
 };
+
+#ifdef FIPS_MODULE
+const OSSL_DISPATCH ossl_hmac_fips_intern_functions[] = {
+    { OSSL_FUNC_MAC_NEWCTX, (void (*)(void))hmac_fips_intern_new },
+    { OSSL_FUNC_MAC_DUPCTX, (void (*)(void))hmac_dup },
+    { OSSL_FUNC_MAC_FREECTX, (void (*)(void))hmac_free },
+    { OSSL_FUNC_MAC_INIT, (void (*)(void))hmac_init },
+    { OSSL_FUNC_MAC_UPDATE, (void (*)(void))hmac_update },
+    { OSSL_FUNC_MAC_FINAL, (void (*)(void))hmac_final },
+    { OSSL_FUNC_MAC_GETTABLE_CTX_PARAMS,
+      (void (*)(void))hmac_gettable_ctx_params },
+    { OSSL_FUNC_MAC_GET_CTX_PARAMS, (void (*)(void))hmac_get_ctx_params },
+    { OSSL_FUNC_MAC_SETTABLE_CTX_PARAMS,
+      (void (*)(void))hmac_settable_ctx_params },
+    { OSSL_FUNC_MAC_SET_CTX_PARAMS, (void (*)(void))hmac_set_ctx_params },
+    { 0, NULL }
+};
+#endif

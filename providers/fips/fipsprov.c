@@ -366,6 +366,17 @@ static const OSSL_ALGORITHM fips_macs[] = {
     { NULL, NULL, NULL }
 };
 
+static const OSSL_ALGORITHM fips_intern_macs[] = {
+#ifndef OPENSSL_NO_CMAC
+    { PROV_NAMES_CMAC, FIPS_DEFAULT_PROPERTIES, ossl_cmac_functions },
+#endif
+    { PROV_NAMES_GMAC, FIPS_DEFAULT_PROPERTIES, ossl_gmac_functions },
+    { PROV_NAMES_HMAC, FIPS_DEFAULT_PROPERTIES, ossl_hmac_fips_intern_functions },
+    { PROV_NAMES_KMAC_128, FIPS_DEFAULT_PROPERTIES, ossl_kmac128_functions },
+    { PROV_NAMES_KMAC_256, FIPS_DEFAULT_PROPERTIES, ossl_kmac256_functions },
+    { NULL, NULL, NULL }
+};
+
 static const OSSL_ALGORITHM fips_kdfs[] = {
     { PROV_NAMES_HKDF, FIPS_DEFAULT_PROPERTIES, ossl_kdf_hkdf_functions },
     { PROV_NAMES_TLS1_3_KDF, FIPS_DEFAULT_PROPERTIES,
@@ -481,8 +492,8 @@ static const OSSL_ALGORITHM fips_keymgmt[] = {
     { NULL, NULL, NULL }
 };
 
-static const OSSL_ALGORITHM *fips_query(void *provctx, int operation_id,
-                                        int *no_cache)
+static const OSSL_ALGORITHM *fips_query_int(void *provctx, int operation_id,
+                                            int *no_cache, int internal_ctx)
 {
     *no_cache = 0;
 
@@ -495,7 +506,7 @@ static const OSSL_ALGORITHM *fips_query(void *provctx, int operation_id,
     case OSSL_OP_CIPHER:
         return exported_fips_ciphers;
     case OSSL_OP_MAC:
-        return fips_macs;
+        return internal_ctx ? fips_intern_macs : fips_macs;
     case OSSL_OP_KDF:
         return fips_kdfs;
     case OSSL_OP_RAND:
@@ -512,6 +523,18 @@ static const OSSL_ALGORITHM *fips_query(void *provctx, int operation_id,
         return fips_asym_kem;
     }
     return NULL;
+}
+
+static const OSSL_ALGORITHM *fips_query(void *provctx, int operation_id,
+                                        int *no_cache)
+{
+    return fips_query_int(provctx, operation_id, no_cache, 0);
+}
+
+static const OSSL_ALGORITHM *fips_intern_query(void *provctx, int operation_id,
+                                               int *no_cache)
+{
+    return fips_query_int(provctx, operation_id, no_cache, 1);
 }
 
 static void fips_teardown(void *provctx)
@@ -544,7 +567,7 @@ static const OSSL_DISPATCH fips_dispatch_table[] = {
 /* Functions we provide to ourself */
 static const OSSL_DISPATCH intern_dispatch_table[] = {
     { OSSL_FUNC_PROVIDER_TEARDOWN, (void (*)(void))fips_intern_teardown },
-    { OSSL_FUNC_PROVIDER_QUERY_OPERATION, (void (*)(void))fips_query },
+    { OSSL_FUNC_PROVIDER_QUERY_OPERATION, (void (*)(void))fips_intern_query },
     { 0, NULL }
 };
 

@@ -247,6 +247,9 @@ extern const OSSL_DISPATCH ossl_blake2smac_functions[];
 extern const OSSL_DISPATCH ossl_cmac_functions[];
 extern const OSSL_DISPATCH ossl_gmac_functions[];
 extern const OSSL_DISPATCH ossl_hmac_functions[];
+#ifdef FIPS_MODULE
+extern const OSSL_DISPATCH ossl_hmac_fips_intern_functions[];
+#endif /* FIPS_MODULE */
 extern const OSSL_DISPATCH ossl_kmac128_functions[];
 extern const OSSL_DISPATCH ossl_kmac256_functions[];
 extern const OSSL_DISPATCH ossl_siphash_functions[];

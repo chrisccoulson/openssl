@@ -237,6 +237,8 @@ static int SSKDF_mac_kdm(EVP_MAC_CTX *ctx_init,
     if (kmac_buffer != NULL)
         mac = kmac_buffer;
 
+    if (!ossl_disable_mac_keylen_check(ctx_init))
+        goto end;
     if (!EVP_MAC_init(ctx_init, salt, salt_len, NULL))
         goto end;
 
