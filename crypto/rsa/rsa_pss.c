@@ -121,6 +121,12 @@ int RSA_verify_PKCS1_PSS_mgf1(RSA *rsa, const unsigned char *mHash,
                        maskedDBLen - i);
         goto err;
     }
+#ifdef FIPS_MODULE
+    if ((maskedDBLen - i) > hLen) {
+        ERR_raise(ERR_LIB_RSA, RSA_R_DATA_TOO_LARGE);
+        goto err;
+    }
+#endif
     if (!EVP_DigestInit_ex(ctx, Hash, NULL)
         || !EVP_DigestUpdate(ctx, zeroes, sizeof(zeroes))
         || !EVP_DigestUpdate(ctx, mHash, hLen))
@@ -218,6 +224,12 @@ int RSA_padding_add_PKCS1_PSS_mgf1(RSA *rsa, unsigned char *EM,
         goto err;
     }
     if (sLen > 0) {
+#ifdef FIPS_MODULE
+        if (sLen > hLen) {
+            ERR_raise(ERR_LIB_RSA, RSA_R_DATA_TOO_LARGE);
+            goto err;
+        }
+#endif
         salt = OPENSSL_malloc(sLen);
         if (salt == NULL) {
             ERR_raise(ERR_LIB_RSA, ERR_R_MALLOC_FAILURE);

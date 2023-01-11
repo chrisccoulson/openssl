@@ -1878,6 +1878,7 @@ static const struct rsa_sigver_st rsa_sigver_data[] = {
         FAIL
     },
 #endif
+#if 0
     {
         "pss",
         4096,
@@ -1889,6 +1890,7 @@ static const struct rsa_sigver_st rsa_sigver_data[] = {
         62,
         PASS
     },
+#endif
     {
         "pss",
         4096,
