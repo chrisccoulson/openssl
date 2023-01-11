@@ -34,6 +34,14 @@
 
 #define RSA_DEFAULT_DIGEST_NAME OSSL_DIGEST_NAME_SHA1
 
+#ifdef FIPS_MODULE
+/* Maximum up to digest length for sign, auto for verify */
+# define RSA_PSS_SALTLEN_DEFAULT RSA_PSS_SALTLEN_AUTO_DIGEST_MAX
+#else
+/* Maximum for sign, auto for verify */
+# define RSA_PSS_SALTLEN_DEFAULT RSA_PSS_SALTLEN_AUTO
+#endif
+
 static OSSL_FUNC_signature_newctx_fn rsa_newctx;
 static OSSL_FUNC_signature_sign_init_fn rsa_sign_init;
 static OSSL_FUNC_signature_verify_init_fn rsa_verify_init;
@@ -189,8 +197,7 @@ static void *rsa_newctx(void *provctx, const char *propq)
     prsactx->libctx = PROV_LIBCTX_OF(provctx);
     prsactx->flag_allow_md = 1;
     prsactx->propq = propq_copy;
-    /* Maximum up to digest length for sign, auto for verify */
-    prsactx->saltlen = RSA_PSS_SALTLEN_AUTO_DIGEST_MAX;
+    prsactx->saltlen = RSA_PSS_SALTLEN_DEFAULT;
     prsactx->min_saltlen = -1;
     return prsactx;
 }
@@ -422,8 +429,7 @@ static int rsa_signverify_init(void *vprsactx, void *vrsa,
 
     prsactx->operation = operation;
 
-    /* Maximize up to digest length for sign, auto for verify */
-    prsactx->saltlen = RSA_PSS_SALTLEN_AUTO_DIGEST_MAX;
+    prsactx->saltlen = RSA_PSS_SALTLEN_DEFAULT;
     prsactx->min_saltlen = -1;
 
     switch (RSA_test_flags(prsactx->rsa, RSA_FLAG_TYPE_MASK)) {
