@@ -21,6 +21,8 @@
 #include "crypto/security_bits.h"
 
 #ifdef FIPS_MODULE
+# include <openssl/self_test.h>
+# include "prov/providercommon.h"
 # define MIN_STRENGTH 112
 #else
 # define MIN_STRENGTH 80
@@ -253,6 +255,31 @@ err:
     return ret;
 }
 
+#ifdef FIPS_MODULE
+static int dh_keygen_pairwise_test(DH *dh, OSSL_CALLBACK *cb, void *cbarg)
+{
+    OSSL_SELF_TEST *st = NULL;
+    int ret = 0;
+
+    st = OSSL_SELF_TEST_new(cb, cbarg);
+    if (st == NULL)
+        return 0;
+
+    OSSL_SELF_TEST_onbegin(st, OSSL_SELF_TEST_TYPE_PCT,
+                           UBUNTU_OSSL_SELF_TEST_DESC_PCT_DH);
+
+    if (!ossl_dh_check_pairwise(dh))
+        goto err;
+
+    ret = 1;
+
+ err:
+    OSSL_SELF_TEST_onend(st, ret);
+    OSSL_SELF_TEST_free(st);
+    return ret;
+}
+#endif
+
 static int generate_key(DH *dh)
 {
     int ok = 0;
@@ -363,8 +390,29 @@ static int generate_key(DH *dh)
 
     dh->pub_key = pub_key;
     dh->priv_key = priv_key;
-    dh->dirty_cnt++;
     ok = 1;
+
+#ifdef FIPS_MODULE
+    {
+        OSSL_CALLBACK *cb = NULL;
+        void *cbarg = NULL;
+
+        OSSL_SELF_TEST_get_callback(dh->libctx, &cb, &cbarg);
+        ok = dh_keygen_pairwise_test(dh, cb, cbarg);
+        if (!ok) {
+            ossl_set_error_state(OSSL_SELF_TEST_TYPE_PCT);
+            BN_free(dh->pub_key);
+            BN_free(dh->priv_key);
+            dh->pub_key = NULL;
+            dh->priv_key = NULL;
+            BN_CTX_free(ctx);
+            return ok;
+        }
+    }
+#endif
+
+    dh->dirty_cnt++;
+
  err:
     if (ok != 1)
         ERR_raise(ERR_LIB_DH, ERR_R_BN_LIB);
