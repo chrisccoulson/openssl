@@ -20,6 +20,7 @@
 #include "prov/providercommon.h"
 #include <dlfcn.h>
 #include <link.h>
+#include "checksum.h"
 
 /*
  * We're cheating here. Normally we don't allow RUN_ONCE usage inside the FIPS
@@ -53,8 +54,6 @@ static CRYPTO_RWLOCK *self_test_lock = NULL;
 static CRYPTO_RWLOCK *fips_state_lock = NULL;
 static unsigned char fixed_key[32] = { FIPS_KEY_ELEMENTS };
 static CRYPTO_THREAD_LOCAL self_test_thread_local;
-
-const unsigned char __attribute__((section(".module-checksum"))) module_checksum[32] = {0};
 
 static CRYPTO_ONCE fips_self_test_init = CRYPTO_ONCE_STATIC_INIT;
 DEFINE_RUN_ONCE_STATIC(do_fips_self_test_init)

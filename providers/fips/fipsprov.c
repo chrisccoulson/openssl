@@ -22,14 +22,13 @@
 #include "prov/providercommon.h"
 #include "prov/provider_util.h"
 #include "prov/seeding.h"
+#include "checksum.h"
 #include "fipsprov.h"
 #include "self_test.h"
 #include "internal/core.h"
 
 static const char FIPS_DEFAULT_PROPERTIES[] = "provider=fips,fips=yes";
 static const char FIPS_UNAPPROVED_PROPERTIES[] = "provider=fips,fips=no";
-
-extern const unsigned char module_checksum[32];
 
 /*
  * Forward declarations to ensure that interface functions are correctly
